@@ -367,11 +367,7 @@ function loadSafeFromLocalStorage() {
     if (daten !== null) {
         alleGespeichertenKombis = JSON.parse(daten);
     } else {
-        alleGespeichertenKombis = [
-            { id: 1, text: "Jab ➔ Cross ➔ Linker Midkick",                       kategorie: "🔥 Kick-/Thaiboxen", isFav: false },
-            { id: 2, text: "Jab ➔ Cross ➔ Takedown",                              kategorie: "🥊🤼 MMA",           isFav: false },
-            { id: 3, text: "Jab ➔ Meiden ➔ Rechter Uppercut ➔ Rechter Haken",    kategorie: "🥊 Boxen",           isFav: false }
-        ];
+        alleGespeichertenKombis = [];
         saveSafeToLocalStorage();
     }
     baueTresorUndFilterAuf();
