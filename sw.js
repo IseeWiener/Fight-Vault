@@ -1,40 +1,43 @@
-const CACHE_NAME = 'fightvault-v3'; // Erhöht auf v3, damit der Cache beim User neu geladen wird
+const CACHE_NAME = 'fightvault-v3';
 const ASSETS = [
-    '/',               
-    '/index.html',
-    '/style.css',
-    '/script.js',
-    '/manifest.json'
-    // Hier kannst du später noch Icons oder Bilder hinzufügen
+    '/Fight-Vault/',
+    '/Fight-Vault/index.html',
+    '/Fight-Vault/style.css',
+    '/Fight-Vault/script.js',
+    '/Fight-Vault/manifest.json',
+    '/Fight-Vault/icon-512.png'
 ];
 
+// Installation: alle Dateien in den Cache laden
 self.addEventListener('install', e => {
     e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            console.log('Service Worker: Caching Assets');
-            return cache.addAll(ASSETS);
-        })
+        caches.open(CACHE_NAME)
+            .then(cache => cache.addAll(ASSETS))
+            .then(() => self.skipWaiting())
     );
 });
 
+// Aktivierung: alten Cache löschen
 self.addEventListener('activate', e => {
     e.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(
+        caches.keys().then(keys =>
+            Promise.all(
                 keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-            );
-        })
+            )
+        ).then(() => self.clients.claim())
     );
 });
 
+// Fetch: erst Cache, dann Netzwerk (Offline-first)
 self.addEventListener('fetch', e => {
     e.respondWith(
-        caches.match(e.request).then(res => {
-            // Wenn die Datei im Cache ist, gib sie zurück, sonst hole sie aus dem Netz
-            return res || fetch(e.request);
-        }).catch(() => {
-            // Optional: Wenn der User offline ist und die Datei nicht im Cache ist
-            // return caches.match('/offline.html');
-        })
+        caches.match(e.request).then(cached => {
+            if (cached) return cached;
+            return fetch(e.request).then(response => {
+                let responseClone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseClone));
+                return response;
+            });
+        }).catch(() => caches.match('/Fight-Vault/index.html'))
     );
 });
