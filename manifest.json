@@ -1,7 +1,8 @@
 {
   "name": "FightVault",
   "short_name": "FightVault",
-  "start_url": "/index.html",
+  "start_url": "/Fight-Vault/",
+  "scope": "/Fight-Vault/",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#ff5500",
