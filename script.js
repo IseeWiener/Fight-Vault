@@ -14,6 +14,7 @@ let istArbeitszeit = true;
 let timerLaeuft = false;
 let aktuelleRunde = 1;
 let maxRundenVorgabe = 3;
+let timerWurdeAutoPausiert = false;
 
 // Audio / Chaos
 let aktuellerAudioKombiText = "";
@@ -144,12 +145,14 @@ const erlaubteTechniken = technikenDatenbank.map(t => t.name);
 // ── Dropdown ─────────────────────────────────────────────────────────────────
 function toggleDropdown(event) {
     event.stopPropagation();
-    document.getElementById("categoryDropdown").classList.toggle("show");
+    let dd = document.getElementById("categoryDropdown");
+    dd.classList.toggle("show");
 }
 
 function toggleTrainingFilterDropdown(event) {
     event.stopPropagation();
-    document.getElementById("trainingFilterDropdown").classList.toggle("show");
+    let dd = document.getElementById("trainingFilterDropdown");
+    dd.classList.toggle("show");
 }
 
 function selectFromDropdown(kategorie, emoji) {
@@ -163,48 +166,62 @@ function selectFromDropdown(kategorie, emoji) {
     document.getElementById("categoryDropdown").classList.remove("show");
 }
 
-window.onclick = function (event) {
+window.addEventListener('click', function (event) {
     // Custom Autocomplete schließen
-    if (!event.target.closest('.custom-autocomplete')) {
+    if (!event.target.closest('.custom-autocomplete') && 
+        !event.target.closest('#vorschlagsListe')) {
         let vl = document.getElementById("vorschlagsListe");
         if (vl) vl.classList.remove("open");
     }
 
-    if (!event.target.matches('.btn-dropdown-toggle')) {
-        document.querySelectorAll(".dropdown-menu").forEach(dd => {
-            if (dd.classList.contains('show') && dd.id !== 'trainingFilterDropdown') {
-                dd.classList.remove('show');
-            }
-        });
+    // Kategorie-Dropdown schließen
+    if (!event.target.closest('.category-dropdown-container')) {
+        let dd = document.getElementById("categoryDropdown");
+        if (dd) dd.classList.remove('show');
     }
-    if (!event.target.matches('.btn-training-filter-toggle')) {
+
+    // Training-Filter-Dropdown schließen
+    if (!event.target.closest('#trainingFilterWrapper')) {
         let trDropdown = document.getElementById("trainingFilterDropdown");
-        if (trDropdown && trDropdown.classList.contains('show')) {
-            trDropdown.classList.remove('show');
-        }
+        if (trDropdown) trDropdown.classList.remove('show');
     }
-};
+});
 
 // ── Tab / Mode Navigation ────────────────────────────────────────────────────
 function switchTab(tabId, button) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
 
     document.getElementById(tabId).classList.add('active');
     button.classList.add('active');
 
-    const subNav = document.getElementById('trainingSubNav');
     const trainingFilter = document.getElementById('trainingFilterWrapper');
+    const navGroup = document.getElementById('navTabsGroup');
 
     if (tabId === 'training-tab') {
-        subNav.style.display = 'flex';
-        trainingFilter.style.display = 'block';
+        trainingFilter.classList.add('aktiv');
+        trainingFilter.querySelector('.nav-filter-btn').classList.add('visible');
+        navGroup.classList.add('with-filter');
+        // Timer fortsetzen wenn er pausiert war durch Tab-Wechsel
+        if (timerWurdeAutoPausiert && !timerLaeuft) {
+            toggleTimer();
+            timerWurdeAutoPausiert = false;
+        }
     } else {
-        subNav.style.display = 'none';
-        trainingFilter.style.display = 'none';
+        trainingFilter.classList.remove('aktiv');
+        trainingFilter.querySelector('.nav-filter-btn').classList.remove('visible');
+        navGroup.classList.remove('with-filter');
+        document.getElementById("trainingFilterDropdown").classList.remove("show");
+        // Timer pausieren wenn er läuft
+        if (timerLaeuft) {
+            timerWurdeAutoPausiert = true;
+            stoppeTimer();
+        }
+        stoppeSämtlicheTrainingsAktionen();
     }
-    stoppeSämtlicheTrainingsAktionen();
+
     aktualisiereTrainingMetaStatusTexte();
+    window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 function switchTrainingMode(modeId, button) {
@@ -213,7 +230,15 @@ function switchTrainingMode(modeId, button) {
 
     document.getElementById(modeId).classList.add('active');
     button.classList.add('active');
+
+    // Punkte aktualisieren
+    let idx = trainingModeReihenfolge.indexOf(modeId);
+    document.querySelectorAll('.sub-nav-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === idx);
+    });
+
     stoppeSämtlicheTrainingsAktionen();
+    window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 // ── Technik-Eingabe ───────────────────────────────────────────────────────────
@@ -246,6 +271,112 @@ function filterEingabeTechniken(kategorie, button, vollerNameMitEmoji = 'Alle') 
     }
 }
 
+let tastaturOffen = false;
+let inputTouchStartY = 0;
+let inputTouchStartX = 0;
+let letzterTapZeit = 0;
+let ersterTapGemacht = false;
+let ersterTapTimeout = null;
+
+function initInputTouchHandler() {
+    let input = document.getElementById("kombiInput");
+    if (!input) return;
+
+    // ── Handy: Touch ──────────────────────────────────────────
+    input.addEventListener("touchstart", (e) => {
+        inputTouchStartY = e.touches[0].clientY;
+        inputTouchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    input.addEventListener("touchend", (e) => {
+        let dy = Math.abs(e.changedTouches[0].clientY - inputTouchStartY);
+        let dx = Math.abs(e.changedTouches[0].clientX - inputTouchStartX);
+        if (dy > 8 || dx > 8) return; // war ein Scroll
+
+        let jetzt = Date.now();
+        if (jetzt - letzterTapZeit < 300) return; // Doppel-Trigger verhindern
+        letzterTapZeit = jetzt;
+
+        e.preventDefault();
+        handleInputTap();
+    });
+
+    // ── PC: Maus-Klick ────────────────────────────────────────
+    input.addEventListener("click", (e) => {
+        if ('ontouchstart' in window) return;
+        handleInputTap();
+    });
+
+    // Tastatur erscheint → Input + Dropdown ins Sichtfeld scrollen
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            if (!tastaturOffen) return;
+            let inputEl  = document.getElementById("kombiInput");
+            let dropdown = document.getElementById("vorschlagsListe");
+            if (!inputEl) return;
+
+            setTimeout(() => {
+                let viewH    = window.visualViewport.height;
+                let offsetY  = window.visualViewport.offsetTop;
+
+                // Absolute Position auf der Seite
+                let inputRect   = inputEl.getBoundingClientRect();
+                let dropdownH   = dropdown && dropdown.classList.contains("open")
+                    ? dropdown.offsetHeight
+                    : 0;
+
+                // Unterkante = Input-Unterkante + Dropdown-Höhe, absolut auf der Seite
+                let unterKanteAbsolut = inputRect.bottom + window.scrollY + dropdownH;
+                let sichtbaresEnde    = offsetY + viewH - 16;
+
+                if (unterKanteAbsolut > sichtbaresEnde) {
+                    window.scrollTo({
+                        top: unterKanteAbsolut - viewH + 16,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 200);
+        });
+    }
+}
+
+function handleInputTap() {
+    let input = document.getElementById("kombiInput");
+
+    if (!ersterTapGemacht && !tastaturOffen) {
+        // 1. Tap – nur Dropdown öffnen, kein Scrollen
+        ersterTapGemacht = true;
+        input.setAttribute("readonly", true);
+        zeigeVorschlaege();
+
+        clearTimeout(ersterTapTimeout);
+        ersterTapTimeout = setTimeout(() => {
+            ersterTapGemacht = false;
+        }, 20000);
+
+    } else if (ersterTapGemacht && !tastaturOffen) {
+        // 2. Tap – Tastatur öffnen
+        clearTimeout(ersterTapTimeout);
+        ersterTapGemacht = false;
+        tastaturOffen = true;
+        input.removeAttribute("readonly");
+        input.focus();
+        zeigeVorschlaege();
+
+    } else if (tastaturOffen) {
+        // 3. Tap – Tastatur schließen, Dropdown bleibt
+        tastaturOffen = false;
+        ersterTapGemacht = false;
+        input.setAttribute("readonly", true);
+        input.blur();
+        zeigeVorschlaege();
+    }
+}
+
+function toggleTastatur() {
+    handleInputTap();
+}
+
 function zeigeVorschlaege() {
     aktualisiereVorschlagsListe(document.getElementById("kombiInput").value.trim());
 }
@@ -259,7 +390,6 @@ function aktualisiereVorschlagsListe(wert) {
         gefiltert = aktuelleTechnikListe;
     } else {
         let wertLower = wert.toLowerCase();
-        // Suche in Name UND Aliases
         gefiltert = technikenDatenbank
             .filter(t => {
                 if (!aktuelleTechnikListe.includes(t.name)) return false;
@@ -283,8 +413,30 @@ function aktualisiereVorschlagsListe(wert) {
             item.innerText = technik;
         }
 
-        item.addEventListener("mousedown", (e) => { e.preventDefault(); waehleVorschlag(technik); });
-        item.addEventListener("touchend",  (e) => { e.preventDefault(); waehleVorschlag(technik); });
+        // Touch-Start Position merken
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        item.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            waehleVorschlag(technik);
+        });
+
+        item.addEventListener("touchstart", (e) => {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+
+        item.addEventListener("touchend", (e) => {
+            let deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY);
+            let deltaX = Math.abs(e.changedTouches[0].clientX - touchStartX);
+            // Nur auswählen wenn Finger sich kaum bewegt hat (kein Scroll)
+            if (deltaY < 8 && deltaX < 8) {
+                e.preventDefault();
+                waehleVorschlag(technik);
+            }
+        });
+
         liste.appendChild(item);
     });
 
@@ -293,9 +445,14 @@ function aktualisiereVorschlagsListe(wert) {
 
 function waehleVorschlag(technik) {
     fuegeTechnikHinzu(technik);
-    document.getElementById("kombiInput").value = "";
+    let input = document.getElementById("kombiInput");
+    input.value = "";
+    input.setAttribute("readonly", true);
+    tastaturOffen = false;
+    ersterTapGemacht = false;
+    clearTimeout(ersterTapTimeout);
     document.getElementById("vorschlagsListe").classList.remove("open");
-    document.getElementById("kombiInput").blur(); // Fokus wegnehmen → Dropdown bleibt zu
+    input.blur();
 }
 
 function checkInput() {
@@ -641,7 +798,12 @@ function baueTresorUndFilterAuf() {
     let gefilterteKombis = sortierteKombis.filter(k => aktuellerFilter === 'Alle' || k.kategorie === aktuellerFilter);
 
     if (gefilterteKombis.length === 0) {
-        liste.innerHTML = `<li class="info-text" style="margin-top:15px;">Keine Kombinationen in dieser Kategorie vorhanden.</li>`;
+        liste.innerHTML = `
+            <li class="empty-state">
+                <div class="empty-state-icon">🔐</div>
+                <div class="empty-state-title">Tresor leer</div>
+                <div class="empty-state-text">Erstelle deine erste Kombination<br>und leg sie im Safe ab.</div>
+            </li>`;
         return;
     }
 
@@ -659,17 +821,70 @@ function baueTresorUndFilterAuf() {
                 ontouchend="handleTouchEnd(event, this)"
                 onclick="toggleKombiHighlight(event, this)">
                 <div class="item-links">
-                    <span class="sportart-badge">${sternIcon}${k.kategorie}</span>
-                    <div style="font-weight:bold; font-size:0.95rem; color:#fff;">${k.text}</div>
+                    <div class="sportart-badge">${sternIcon}${k.kategorie}</div>
+                    <div class="kombi-text">${k.text}</div>
                 </div>
                 <div class="action-btns">
-                    <button class="icon-btn" onclick="bearbeiteKombi(${k.id})" title="Bearbeiten">✏️</button>
-                    <button class="icon-btn" onclick="sendeKombiZuAudioCoach('${safeText}')" title="An Audio-Coach senden" style="opacity:0.85;">⚡</button>
-                    <button class="icon-btn" ontouchstart="kopiereKombi(event, '${safeText}', this)" onclick="kopiereKombi(event, '${safeText}', this)" title="Kopieren">📋</button>
-                    <button class="icon-btn" onclick="loescheKombi(${k.id})" style="color:#ff3333;" title="Löschen">🗑️</button>
+                    <button class="icon-btn" onclick="oeffneKombiSheet(${k.id})" title="Aktionen">⚙️</button>
                 </div>
             </li>`;
     });
+}
+
+let aktuelleSheetKombiId = null;
+
+function oeffneKombiSheet(id) {
+    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    if (!kombi) return;
+    aktuelleSheetKombiId = id;
+
+    let sheet = document.getElementById("kombiActionSheet");
+    let title = document.getElementById("kombiSheetTitle");
+    let favBtn = document.getElementById("kombiSheetFavBtn");
+
+    title.innerText = kombi.text;
+    favBtn.innerText = kombi.isFav ? "⭐ Favorit entfernen" : "⭐ Als Favorit markieren";
+    sheet.classList.add("open");
+}
+
+function schliesseKombiSheet() {
+    document.getElementById("kombiActionSheet").classList.remove("open");
+    aktuelleSheetKombiId = null;
+}
+
+function sheetBearbeiten() {
+    let id = aktuelleSheetKombiId;
+    schliesseKombiSheet();
+    bearbeiteKombi(id);
+}
+
+function sheetAudioCoach() {
+    let kombi = alleGespeichertenKombis.find(k => k.id === aktuelleSheetKombiId);
+    if (!kombi) return;
+    let text = kombi.text;
+    schliesseKombiSheet();
+    sendeKombiZuAudioCoach(text);
+}
+
+function sheetKopieren() {
+    let kombi = alleGespeichertenKombis.find(k => k.id === aktuelleSheetKombiId);
+    if (!kombi) return;
+    let text = kombi.text;
+    schliesseKombiSheet();
+    kopiereKombi(null, text, { innerHTML: "" });
+    zeigeToast("📋 Kombi kopiert!");
+}
+
+function sheetFavorit() {
+    let id = aktuelleSheetKombiId;
+    schliesseKombiSheet();
+    toggleFavorit(id);
+}
+
+function sheetLoeschen() {
+    let id = aktuelleSheetKombiId;
+    schliesseKombiSheet();
+    loescheKombi(id);
 }
 
 function filterTresor(kat) {
@@ -680,13 +895,14 @@ function filterTresor(kat) {
 // ── Training-Filter ───────────────────────────────────────────────────────────
 function waehleTrainingFilter(kat) {
     aktuellerTrainingFilter = kat;
-    let toggleBtn = document.getElementById("trainingFilterToggle");
+    let toggleBtn   = document.getElementById("trainingFilterToggle");
+    let filterLabel = document.getElementById("filterBtnLabel");
 
     if (kat === 'Alle') {
-        toggleBtn.innerText = "🔍 Alle";
+        if (filterLabel) filterLabel.innerText = "Alle";
         toggleBtn.classList.remove("filter-active");
     } else {
-        toggleBtn.innerText = "🔍 " + kat.split(" ")[0];
+        if (filterLabel) filterLabel.innerText = kat.split(" ")[0];
         toggleBtn.classList.add("filter-active");
     }
 
@@ -742,6 +958,15 @@ function startGambleRoulette(mitAudio = false) {
 }
 
 // ── Audio-Coach ───────────────────────────────────────────────────────────────
+function toggleAudioSettings() {
+    let panel  = document.getElementById("audioSettingsPanel");
+    let toggle = document.getElementById("audioSettingsToggle");
+    let arrow  = document.getElementById("audioSettingsArrow");
+    let offen  = panel.classList.toggle("open");
+    toggle.classList.toggle("open", offen);
+    arrow.style.transform = offen ? "rotate(180deg)" : "rotate(0deg)";
+}
+
 function liveUpdateAudioSlider(val) {
     let sekunden = parseInt(val) / 2;
     let anzeige = sekunden % 1 === 0 ? sekunden + "s" : sekunden + "s";
@@ -1038,10 +1263,13 @@ function zeigeToast(nachricht) {
 // ── Drum Roller ───────────────────────────────────────────────────────────────
 const rundenWerte = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12];
 let drumIndex = 3;
-let drumStartX = 0;
-let drumStartOffset = 0;
-let drumIsDragging = false;
 const DRUM_ITEM_WIDTH = 60;
+
+// Touch-Tracking
+let drumTouchStartX   = 0;
+let drumTouchStartY   = 0;
+let drumTouchStartIdx = 0;
+let drumTouchDir      = null; // 'h' | 'v' | null
 
 function drumRollerInit() {
     let roller = document.getElementById("drumRoller");
@@ -1049,64 +1277,128 @@ function drumRollerInit() {
 
     roller.style.paddingLeft  = `calc(50% - ${DRUM_ITEM_WIDTH / 2}px)`;
     roller.style.paddingRight = `calc(50% - ${DRUM_ITEM_WIDTH / 2}px)`;
+    drumRender(false);
 
-    drumSetzeIndex(drumIndex, false);
+    // ── Touch ──────────────────────────────────────────────────
+    roller.addEventListener("touchstart", (e) => {
+        drumTouchStartX   = e.touches[0].clientX;
+        drumTouchStartY   = e.touches[0].clientY;
+        drumTouchStartIdx = drumIndex;
+        drumTouchDir      = null;
+        roller.style.transition = "none";
+    }, { passive: true });
 
-    roller.addEventListener("mousedown",  drumOnStart);
-    roller.addEventListener("touchstart", drumOnStart, { passive: true });
-    roller.addEventListener("mousemove",  drumOnMove);
-    roller.addEventListener("touchmove",  drumOnMove, { passive: false });
-    roller.addEventListener("mouseup",    drumOnEnd);
-    roller.addEventListener("touchend",   drumOnEnd);
-    roller.addEventListener("mouseleave", drumOnEnd);
+    roller.addEventListener("touchmove", (e) => {
+        let dx = e.touches[0].clientX - drumTouchStartX;
+        let dy = e.touches[0].clientY - drumTouchStartY;
 
+        if (!drumTouchDir) {
+            if (Math.abs(dx) > Math.abs(dy)) drumTouchDir = 'h';
+            else drumTouchDir = 'v';
+        }
+
+        if (drumTouchDir === 'v') return; // Seite scrollen
+
+        e.preventDefault();
+        let neuIdx = Math.round(drumTouchStartIdx - dx / DRUM_ITEM_WIDTH);
+        neuIdx = Math.max(0, Math.min(rundenWerte.length - 1, neuIdx));
+        drumIndex = neuIdx;
+        drumRender(false);
+    }, { passive: false });
+
+    roller.addEventListener("touchend", (e) => {
+        if (drumTouchDir === 'h') {
+            let dx = e.changedTouches[0].clientX - drumTouchStartX;
+
+            // Kurzer Tap auf Item → direkt springen
+            if (Math.abs(dx) < 8) {
+                let touch = e.changedTouches[0];
+                let el = document.elementFromPoint(touch.clientX, touch.clientY);
+                let item = el && el.closest(".drum-item");
+                if (item) {
+                    let idx = parseInt(item.dataset.index);
+                    if (!isNaN(idx)) { drumIndex = idx; }
+                }
+            } else {
+                let neuIdx = Math.round(drumTouchStartIdx - dx / DRUM_ITEM_WIDTH);
+                drumIndex = Math.max(0, Math.min(rundenWerte.length - 1, neuIdx));
+            }
+        } else if (drumTouchDir === null || Math.abs(e.changedTouches[0].clientX - drumTouchStartX) < 8) {
+            // Tap ohne Bewegung → Item antippen
+            let touch = e.changedTouches[0];
+            let el = document.elementFromPoint(touch.clientX, touch.clientY);
+            let item = el && el.closest(".drum-item");
+            if (item) {
+                let idx = parseInt(item.dataset.index);
+                if (!isNaN(idx)) drumIndex = idx;
+            }
+        }
+
+        drumApply();
+    });
+
+    // ── Mouse (PC) ─────────────────────────────────────────────
+    let mouseDown = false;
+    let mouseStartX = 0;
+    let mouseStartIdx = 0;
+    let mouseMoved = false;
+
+    roller.addEventListener("mousedown", (e) => {
+        mouseDown    = true;
+        mouseStartX  = e.clientX;
+        mouseStartIdx = drumIndex;
+        mouseMoved   = false;
+        roller.style.transition = "none";
+        e.preventDefault();
+    });
+
+    window.addEventListener("mousemove", (e) => {
+        if (!mouseDown) return;
+        let dx = e.clientX - mouseStartX;
+        if (Math.abs(dx) > 3) mouseMoved = true;
+        let neuIdx = Math.round(mouseStartIdx - dx / DRUM_ITEM_WIDTH);
+        drumIndex = Math.max(0, Math.min(rundenWerte.length - 1, neuIdx));
+        drumRender(false);
+    });
+
+    window.addEventListener("mouseup", (e) => {
+        if (!mouseDown) return;
+        mouseDown = false;
+
+        if (!mouseMoved) {
+            // Klick auf Item
+            let el = document.elementFromPoint(e.clientX, e.clientY);
+            let item = el && el.closest(".drum-item");
+            if (item) {
+                let idx = parseInt(item.dataset.index);
+                if (!isNaN(idx)) drumIndex = idx;
+            }
+        }
+        drumApply();
+    });
+
+    // ── Mausrad ────────────────────────────────────────────────
     roller.parentElement.addEventListener("wheel", (e) => {
         e.preventDefault();
-        drumSetzeIndex(drumIndex + (e.deltaY > 0 ? 1 : -1), true);
+        drumIndex = Math.max(0, Math.min(rundenWerte.length - 1, drumIndex + (e.deltaY > 0 ? 1 : -1)));
+        drumApply();
     }, { passive: false });
 }
 
-function drumGetX(e) {
-    return e.touches ? e.touches[0].clientX : e.clientX;
-}
-
-function drumOnStart(e) {
-    drumIsDragging = true;
-    drumStartX = drumGetX(e);
-    drumStartOffset = drumIndex * DRUM_ITEM_WIDTH;
-    document.getElementById("drumRoller").style.transition = "none";
-}
-
-function drumOnMove(e) {
-    if (!drumIsDragging) return;
-    if (e.cancelable) e.preventDefault();
-    let delta = drumStartX - drumGetX(e);
-    let neuIndex = Math.round((drumStartOffset + delta) / DRUM_ITEM_WIDTH);
-    neuIndex = Math.max(0, Math.min(rundenWerte.length - 1, neuIndex));
-    drumAktualisierPosition(neuIndex, false);
-}
-
-function drumOnEnd(e) {
-    if (!drumIsDragging) return;
-    drumIsDragging = false;
-    let delta = drumStartX - drumGetX(e);
-    let neuIndex = Math.round((drumStartOffset + delta) / DRUM_ITEM_WIDTH);
-    drumSetzeIndex(neuIndex, true);
-}
-
-function drumAktualisierPosition(index, mitAnimation) {
+function drumRender(mitAnimation) {
     let roller = document.getElementById("drumRoller");
-    roller.style.transition = mitAnimation ? "transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none";
-    roller.style.transform = `translateX(${-index * DRUM_ITEM_WIDTH}px)`;
-
+    if (!roller) return;
+    roller.style.transition = mitAnimation
+        ? "transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)"
+        : "none";
+    roller.style.transform = `translateX(${-drumIndex * DRUM_ITEM_WIDTH}px)`;
     document.querySelectorAll(".drum-item").forEach((item, i) => {
-        item.classList.toggle("active", i === index);
+        item.classList.toggle("active", i === drumIndex);
     });
 }
 
-function drumSetzeIndex(index, mitAnimation) {
-    drumIndex = Math.max(0, Math.min(rundenWerte.length - 1, index));
-    drumAktualisierPosition(drumIndex, mitAnimation);
+function drumApply() {
+    drumRender(true);
     maxRundenVorgabe = rundenWerte[drumIndex];
     resetTimer();
 }
@@ -1148,34 +1440,51 @@ function resetTimer() {
     istArbeitszeit  = true;
     timerSekunden   = 180;
     aktuelleRunde   = 1;
-    document.getElementById("timerStatus").innerText = "Bereit";
-    document.getElementById("timerStatus").style.color = "#444";
+    document.getElementById("timerStatus").innerText = "BEREIT";
+    document.getElementById("timerStatus").style.color = "var(--text-dim)";
+    let kreis = document.getElementById("timerCircleProgress");
+    if (kreis) { kreis.style.strokeDashoffset = 0; kreis.className = "timer-circle-progress"; }
     renderTimerDisplay();
 }
 
 function handleTimerWechsel() {
     if (istArbeitszeit) {
         istArbeitszeit = false;
-        spieleBoxglocke(3); // 3x Glocke = Rundenende
+        spieleBoxglocke(3);
 
         if (maxRundenVorgabe > 0 && aktuelleRunde >= maxRundenVorgabe) {
             stoppeTimer();
-            document.getElementById("timerStatus").innerText   = "🏆 Workout Beendet!";
-            document.getElementById("timerStatus").style.color = "#00e676";
+            document.getElementById("timerStatus").innerText   = "FERTIG 🏆";
+            document.getElementById("timerStatus").style.color = "var(--green)";
+            let kreis = document.getElementById("timerCircleProgress");
+            if (kreis) kreis.classList.add("done-mode");
             stoppeSämtlicheTrainingsAktionen();
             return;
         }
 
         timerSekunden = 60;
-        document.getElementById("timerStatus").innerText   = "⏸️ Pause";
-        document.getElementById("timerStatus").style.color = "#ffcc00";
+        document.getElementById("timerStatus").innerText   = "PAUSE";
+        document.getElementById("timerStatus").style.color = "var(--gold)";
+        // Trainer-Status merken und stoppen
+        let audioWarAktiv = audioLoopLaeuft;
+        let chaosWarAktiv = chaosTrainerLaeuft;
+        stoppeSämtlicheTrainingsAktionen();
+        // Für Resume merken
+        window._audioWarAktiv = audioWarAktiv;
+        window._chaosWarAktiv = chaosWarAktiv;
+
     } else {
         istArbeitszeit = true;
         aktuelleRunde++;
-        spieleBoxglocke(1); // 1x Glocke = neue Runde startet
+        spieleBoxglocke(1);
         timerSekunden = 180;
-        document.getElementById("timerStatus").innerText   = "🥊 Work";
-        document.getElementById("timerStatus").style.color = "#ff5500";
+        document.getElementById("timerStatus").innerText   = "WORK 🥊";
+        document.getElementById("timerStatus").style.color = "var(--orange)";
+        // Trainer wieder starten falls vorher aktiv
+        if (window._audioWarAktiv) toggleAudioLoop();
+        if (window._chaosWarAktiv) toggleChaosTrainer();
+        window._audioWarAktiv = false;
+        window._chaosWarAktiv = false;
     }
 }
 
@@ -1187,8 +1496,82 @@ function renderTimerDisplay() {
 
     let rundenAnzeige = document.getElementById("roundCounterDisplay");
     rundenAnzeige.innerText = maxRundenVorgabe === 0
-        ? "Modus: Endlos-Training"
+        ? "Endlos-Training"
         : `Runde ${aktuelleRunde} von ${maxRundenVorgabe}`;
+
+    // Kreis-Progress updaten
+    let kreis = document.getElementById("timerCircleProgress");
+    if (kreis) {
+        let maxSek = istArbeitszeit ? 180 : 60;
+        let progress = timerSekunden / maxSek;
+        let umfang = 2 * Math.PI * 80; // r=80
+        kreis.style.strokeDashoffset = umfang * (1 - progress);
+        kreis.className = "timer-circle-progress" +
+            (!istArbeitszeit ? " pause-mode" : "");
+    }
+}
+
+// ── Swipe Navigation ──────────────────────────────────────────────────────────
+const tabReihenfolge      = ['safe-tab', 'training-tab'];
+const trainingModeReihenfolge = ['standard-mode', 'audio-mode', 'chaos-mode'];
+const trainingModeBtns    = ['subBtnStandard', 'subBtnAudio', 'subBtnChaos'];
+
+let swipeTouchStartX = 0;
+let swipeTouchStartY = 0;
+let swipeRichtung    = null;
+
+function initSwipeNavigation() {
+    document.addEventListener("touchstart", (e) => {
+        // Drum Roller und Input ignorieren
+        if (e.target.closest("#drumRoller") || e.target.closest(".custom-autocomplete")) return;
+        swipeTouchStartX = e.touches[0].clientX;
+        swipeTouchStartY = e.touches[0].clientY;
+        swipeRichtung    = null;
+    }, { passive: true });
+
+    document.addEventListener("touchend", (e) => {
+        if (e.target.closest("#drumRoller") || e.target.closest(".custom-autocomplete")) return;
+
+        let dx = e.changedTouches[0].clientX - swipeTouchStartX;
+        let dy = e.changedTouches[0].clientY - swipeTouchStartY;
+
+        // Nur horizontale Swipes (mindestens 60px, mehr horizontal als vertikal)
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+        let richtung = dx < 0 ? 'links' : 'rechts';
+        let aktiverTab = document.querySelector('.tab-content.active');
+
+        if (aktiverTab.id === 'safe-tab') {
+            // Safe → Training (nur Swipe links)
+            if (richtung === 'links') {
+                switchTab('training-tab', document.getElementById('navBtnTraining'));
+            }
+        } else if (aktiverTab.id === 'training-tab') {
+            let aktiverModus = document.querySelector('.mode-content.active');
+            let aktuellerIdx = trainingModeReihenfolge.indexOf(aktiverModus.id);
+
+            if (richtung === 'rechts') {
+                if (aktuellerIdx > 0) {
+                    // Zurück zwischen Modi
+                    switchTrainingMode(
+                        trainingModeReihenfolge[aktuellerIdx - 1],
+                        document.getElementById(trainingModeBtns[aktuellerIdx - 1])
+                    );
+                } else {
+                    // Beim ersten Modus → zurück zu Safe
+                    switchTab('safe-tab', document.getElementById('navBtnSafe'));
+                }
+            } else {
+                if (aktuellerIdx < trainingModeReihenfolge.length - 1) {
+                    // Vorwärts zwischen Modi
+                    switchTrainingMode(
+                        trainingModeReihenfolge[aktuellerIdx + 1],
+                        document.getElementById(trainingModeBtns[aktuellerIdx + 1])
+                    );
+                }
+            }
+        }
+    }, { passive: true });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1196,4 +1579,6 @@ window.addEventListener('DOMContentLoaded', () => {
     loadSafeFromLocalStorage();
     filterEingabeTechniken('Alle');
     drumRollerInit();
+    initInputTouchHandler();
+    initSwipeNavigation();
 });
