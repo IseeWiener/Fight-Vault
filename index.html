@@ -82,12 +82,17 @@
             </div>
 
             <div class="input-zeile">
-                <input type="text" id="kombiInput" list="techniken"
-                       placeholder="Technik wählen, tippen oder Kombi einfügen..."
-                       oninput="checkInput()" onkeypress="checkEnter(event)" autofocus>
+                <div class="custom-autocomplete" style="flex:1; position:relative;">
+                    <input type="text" id="kombiInput"
+                           placeholder="Technik wählen, tippen oder Kombi einfügen..."
+                           oninput="checkInput()" onkeypress="checkEnter(event)"
+                           onfocus="zeigeVorschlaege()"
+                           onblur="setTimeout(() => document.getElementById('vorschlagsListe').classList.remove('open'), 150)"
+                           autocomplete="off" autofocus>
+                    <div id="vorschlagsListe" class="vorschlags-dropdown"></div>
+                </div>
                 <button id="diceBtn" class="btn-dice" onclick="generiereZufaelligeKombi()" title="Zufällige sinnvolle Kombination würfeln">🎲</button>
             </div>
-            <datalist id="techniken"></datalist>
 
             <div id="kombiVorschau" class="vorschau-bereich"
                  onclick="loescheLetzteTechnik()" title="Klicken, um die letzte Technik zu löschen">
@@ -200,21 +205,25 @@
             <div id="timerDisplay" class="timer-display">03:00</div>
             <div id="roundCounterDisplay" class="timer-round-counter">Modus: Endlos-Training</div>
 
-            <div class="option-row" style="margin-bottom:12px; padding: 10px 14px;">
-                <label for="timerRundenSelect">Anzahl Runden:</label>
-                <select id="timerRundenSelect" style="width:auto; padding:6px 10px; font-size:0.85rem; border-radius:6px;"
-                        onchange="updateRundenVorgabe()">
-                    <option value="0">♾️ Endlos durchtrainieren</option>
-                    <option value="1">1 Runde</option>
-                    <option value="2">2 Runden</option>
-                    <option value="3" selected>3 Runden</option>
-                    <option value="4">4 Runden</option>
-                    <option value="5">5 Runden</option>
-                    <option value="6">6 Runden</option>
-                    <option value="8">8 Runden</option>
-                    <option value="10">10 Runden</option>
-                    <option value="12">12 Runden</option>
-                </select>
+            <div class="option-row" style="margin-bottom:12px; padding: 10px 14px; flex-direction: column; align-items: flex-start; gap: 10px;">
+                <label style="color:#aaa;">Anzahl Runden:</label>
+                <div class="drum-roller-container">
+                    <div class="drum-roller-highlight"></div>
+                    <div id="drumRoller" class="drum-roller">
+                        <div class="drum-item" data-value="0">♾️</div>
+                        <div class="drum-item" data-value="1">1</div>
+                        <div class="drum-item" data-value="2">2</div>
+                        <div class="drum-item" data-value="3">3</div>
+                        <div class="drum-item" data-value="4">4</div>
+                        <div class="drum-item" data-value="5">5</div>
+                        <div class="drum-item" data-value="6">6</div>
+                        <div class="drum-item" data-value="8">8</div>
+                        <div class="drum-item" data-value="10">10</div>
+                        <div class="drum-item" data-value="12">12</div>
+                    </div>
+                    <div class="drum-roller-fade-top"></div>
+                    <div class="drum-roller-fade-bottom"></div>
+                </div>
             </div>
 
             <div class="timer-controls">
@@ -223,6 +232,9 @@
             </div>
         </div>
     </div>
+
+    <!-- ── Toast Banner ───────────────────────────────────────── -->
+    <div id="toastBanner" class="toast-banner"></div>
 
     <!-- ── Lösch-Modal ─────────────────────────────────────────── -->
     <div id="loeschModal" class="modal-overlay">
@@ -268,3 +280,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
