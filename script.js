@@ -34,6 +34,43 @@ let aktuelleRunde = 1;
 let maxRundenVorgabe = 3;
 let timerWurdeAutoPausiert = false;
 
+// Zeitvorgaben: [Arbeitszeit in Sek, Pause in Sek]
+const zeitStufen = [
+    [60,  20],   // 1 Min / 20 Sek
+    [120, 40],   // 2 Min / 40 Sek
+    [180, 60],   // 3 Min / 1 Min
+];
+let aktuelleZeitStufe = 2; // Standard: 3 Min
+
+function aendereArbeitszeit(richtung) {
+    aktuelleZeitStufe = Math.max(0, Math.min(zeitStufen.length - 1, aktuelleZeitStufe + richtung));
+    aktualisiereZeitAnzeige();
+    resetTimer();
+    haptic.light();
+}
+
+function aktualisiereZeitAnzeige() {
+    let [arbeit, pause] = zeitStufen[aktuelleZeitStufe];
+    let arbeitMin = Math.floor(arbeit / 60);
+    let arbeitSek = arbeit % 60;
+    let pauseMin  = Math.floor(pause / 60);
+    let pauseSek  = pause % 60;
+
+    let arbeitEl = document.getElementById("arbeitszeitAnzeige");
+    let pauseEl  = document.getElementById("pauseAnzeige");
+    if (arbeitEl) arbeitEl.innerText = `${arbeitMin}:${String(arbeitSek).padStart(2,'0')}`;
+    if (pauseEl)  pauseEl.innerText  = pauseSek === 0
+        ? `${pauseMin}:00`
+        : `0:${String(pauseSek).padStart(2,'0')}`;
+
+    // Plus/Minus Button deaktivieren an den Grenzen
+    let btns = document.querySelectorAll('.time-picker-btn');
+    if (btns.length >= 2) {
+        btns[0].disabled = aktuelleZeitStufe === 0;
+        btns[1].disabled = aktuelleZeitStufe === zeitStufen.length - 1;
+    }
+}
+
 // Audio / Chaos
 let aktuellerAudioKombiText = "";
 let audioLoopInterval = null;
@@ -51,60 +88,60 @@ let isLongPressTriggered = false;
 // ── Datenbank ────────────────────────────────────────────────────────────────
 const technikenDatenbank = [
     // ── Boxen ─────────────────────────────────────────────────────
-    { name: "Jab",                    kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["linke gerade", "führhand", "linker stoß"] },
-    { name: "Cross",                  kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["rechte gerade", "schlaghand", "rechter stoß", "gerade rechts"] },
-    { name: "Linker Haken",           kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["linker schwinger", "haken links"] },
-    { name: "Rechter Haken",          kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["rechter schwinger", "haken rechts"] },
-    { name: "Linker Uppercut",        kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["linker aufwärtshaken", "aufwärts links", "kinnhaken links"] },
-    { name: "Rechter Uppercut",       kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["rechter aufwärtshaken", "aufwärts rechts", "kinnhaken rechts"] },
-    { name: "Linker Körperhaken",     kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["haken auf den körper links", "leberhaken", "körper links"] },
-    { name: "Rechter Körperhaken",    kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["haken auf den körper rechts", "körper rechts"] },
-    { name: "Overhand",               kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["bogenrechte", "überkopfschlag", "hammer rechts"] },
-    { name: "Slip Links",             kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["ausweichen links", "kopf links", "dodge links"] },
-    { name: "Slip Rechts",            kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["ausweichen rechts", "kopf rechts", "dodge rechts"] },
-    { name: "Rollbewegung",           kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["ducken", "rollen", "bob", "unterlaufen"] },
-    { name: "Meiden",                 kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["zurückweichen", "zurück", "step back", "rückwärts"] },
-    { name: "Block",                  kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["decken", "abblock", "abwehr", "schutz"] },
+    { name: "Jab",                    kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["linke gerade", "führhand", "linker stoß"] },
+    { name: "Cross",                  kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["rechte gerade", "schlaghand", "rechter stoß"] },
+    { name: "Linker Haken",           kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["linker schwinger", "haken links"] },
+    { name: "Rechter Haken",          kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["rechter schwinger", "haken rechts"] },
+    { name: "Linker Uppercut",        kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["linker aufwärtshaken", "aufwärts links"] },
+    { name: "Rechter Uppercut",       kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["rechter aufwärtshaken", "aufwärts rechts"] },
+    { name: "Linker Körperhaken",     kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["haken auf den körper links", "leberhaken"] },
+    { name: "Rechter Körperhaken",    kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["haken auf den körper rechts", "körper rechts"] },
+    { name: "Overhand",               kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, chaosOk: false, typ: "schlag",    aliases: ["bogenrechte", "überkopfschlag"] },
+    { name: "Slip Links",             kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, chaosOk: false, typ: "defense",   aliases: ["ausweichen links", "kopf links"] },
+    { name: "Slip Rechts",            kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, chaosOk: false, typ: "defense",   aliases: ["ausweichen rechts", "kopf rechts"] },
+    { name: "Rollbewegung",           kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, chaosOk: false, typ: "defense",   aliases: ["ducken", "rollen", "bob"] },
+    { name: "Meiden",                 kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  chaosOk: true,  typ: "defense",   aliases: ["zurückweichen", "zurück", "step back"] },
+    { name: "Block",                  kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  chaosOk: true,  typ: "defense",   aliases: ["decken", "abblock", "abwehr"] },
     // ── Kick-/Thaiboxen ──────────────────────────────────────────
-    { name: "Linker Ellbogen",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["ellbogen links"] },
-    { name: "Rechter Ellbogen",       kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["ellbogen rechts"] },
-    { name: "Linkes Knie",            kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["knie links"] },
-    { name: "Rechtes Knie",           kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["knie rechts"] },
-    { name: "Aufwärtsknie",           kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["knie nach oben", "knie hoch"] },
-    { name: "Fliegendes Knie",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["springendes knie", "jump knie"] },
-    { name: "Linker Lowkick",         kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["tritt aufs bein links", "beintritt links", "kick uf die oberschenkel links"] },
-    { name: "Linker Midkick",         kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["tritt auf den körper links", "körperkick links", "kick auf die rippen links"] },
-    { name: "Linker Highkick",        kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["kopfkick links", "tritt auf den kopf links", "kick hoch links"] },
-    { name: "Linker Bodykick",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["körpertritt links", "rippenkick links"] },
-    { name: "Rechter Lowkick",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["tritt aufs bein rechts", "beintritt rechts", "kick auf die oberschenkel rechts"] },
-    { name: "Rechter Midkick",        kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["tritt auf den körper rechts", "körperkick rechts", "kick auf die rippen rechts"] },
-    { name: "Rechter Highkick",       kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["kopfkick rechts", "tritt auf den kopf rechts", "kick hoch rechts"] },
-    { name: "Rechter Bodykick",       kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["körpertritt rechts", "rippenkick rechts"] },
-    { name: "Frontkick",              kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["vorwärtskick", "gerader tritt", "push kick", "stampftritt"] },
-    { name: "Teep",                   kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: false, aliases: ["schubkick", "push kick", "abstandskick"] },
-    { name: "Clinch",                 kat: ["Kick-/Thaiboxen", "MMA", "Ringen/Grappling"],     audioOk: true,  aliases: ["umklammern", "festhalten", "nahkampf greifen"] },
+    { name: "Linker Ellbogen",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["ellbogen links"] },
+    { name: "Rechter Ellbogen",       kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "schlag",    aliases: ["ellbogen rechts"] },
+    { name: "Linkes Knie",            kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "knie",      aliases: ["knie links"] },
+    { name: "Rechtes Knie",           kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "knie",      aliases: ["knie rechts"] },
+    { name: "Aufwärtsknie",           kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "knie",      aliases: ["knie nach oben", "knie hoch"] },
+    { name: "Fliegendes Knie",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: false, typ: "knie",      aliases: ["springendes knie", "jump knie"] },
+    { name: "Linker Lowkick",         kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["tritt aufs bein links", "beintritt links"] },
+    { name: "Linker Midkick",         kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["tritt auf den körper links", "körperkick links"] },
+    { name: "Linker Highkick",        kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["kopfkick links", "tritt auf den kopf links"] },
+    { name: "Linker Bodykick",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["körpertritt links", "rippenkick links"] },
+    { name: "Rechter Lowkick",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["tritt aufs bein rechts", "beintritt rechts"] },
+    { name: "Rechter Midkick",        kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["tritt auf den körper rechts", "körperkick rechts"] },
+    { name: "Rechter Highkick",       kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["kopfkick rechts", "tritt auf den kopf rechts"] },
+    { name: "Rechter Bodykick",       kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["körpertritt rechts", "rippenkick rechts"] },
+    { name: "Frontkick",              kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  chaosOk: true,  typ: "kick",      aliases: ["vorwärtskick", "gerader tritt", "stampftritt"] },
+    { name: "Teep",                   kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: false, chaosOk: false, typ: "kick",      aliases: ["schubkick", "push kick", "abstandskick"] },
+    { name: "Clinch",                 kat: ["Kick-/Thaiboxen", "MMA", "Ringen/Grappling"],     audioOk: true,  chaosOk: false, typ: "clinch",    aliases: ["umklammern", "festhalten", "nahkampf greifen"] },
     // ── MMA ──────────────────────────────────────────────────────
-    { name: "Sprawl",                 kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["takedown abwehr", "beine wegziehen", "sprawlen"] },
-    { name: "Takedown",               kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["zu boden bringen", "wurf", "niederringen"] },
-    { name: "Shoot",                  kat: ["MMA"],                                            audioOk: false, aliases: ["anlauf zum takedown", "einschießen", "beine greifen anlauf"] },
-    { name: "Dirty Boxing",           kat: ["MMA"],                                            audioOk: false, aliases: ["schläge im clinch", "nahkampf boxen"] },
-    { name: "Wandarbeit",             kat: ["MMA"],                                            audioOk: false, aliases: ["gegen die wand drücken", "cage work"] },
-    { name: "Kimura-Griff",           kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["schultergriff", "armhebel hinten"] },
-    { name: "Guillotine",             kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["würgegriff vorne", "kopfgriff"] },
+    { name: "Sprawl",                 kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "defense",   aliases: ["takedown abwehr", "beine wegziehen"] },
+    { name: "Takedown",               kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "wurf",      aliases: ["zu boden bringen", "wurf"] },
+    { name: "Shoot",                  kat: ["MMA"],                                            audioOk: false, chaosOk: false, typ: "wurf",      aliases: ["anlauf zum takedown", "einschießen"] },
+    { name: "Dirty Boxing",           kat: ["MMA"],                                            audioOk: false, chaosOk: false, typ: "schlag",    aliases: ["schläge im clinch"] },
+    { name: "Wandarbeit",             kat: ["MMA"],                                            audioOk: false, chaosOk: false, typ: "clinch",    aliases: ["gegen die wand drücken"] },
+    { name: "Kimura-Griff",           kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "griff",     aliases: ["schultergriff", "armhebel hinten"] },
+    { name: "Guillotine",             kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "griff",     aliases: ["würgegriff vorne", "kopfgriff"] },
     // ── Ringen/Grappling ─────────────────────────────────────────
-    { name: "Hüftwurf",              kat: ["Ringen/Grappling"],                               audioOk: false, aliases: ["über die hüfte werfen", "judowurf"] },
-    { name: "Doppelbeinsatz",         kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["beide beine greifen", "double leg"] },
-    { name: "Einseinangriff",         kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["ein bein greifen", "single leg"] },
-    { name: "Butterfly Guard",        kat: ["Ringen/Grappling"],                               audioOk: false, aliases: ["schmetterling guard", "bodenlage abwehr"] },
-    { name: "Armhebel",               kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["arm strecken", "arm sperren", "armbar"] },
-    { name: "Beinhebel-Ansatz",       kat: ["Ringen/Grappling"],                               audioOk: false, aliases: ["bein sperren", "fußhebel vorbereitung"] },
+    { name: "Hüftwurf",              kat: ["Ringen/Grappling"],                               audioOk: false, chaosOk: false, typ: "wurf",      aliases: ["über die hüfte werfen", "judowurf"] },
+    { name: "Doppelbeinsatz",         kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "wurf",      aliases: ["beide beine greifen", "double leg"] },
+    { name: "Einseinangriff",         kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "wurf",      aliases: ["ein bein greifen", "single leg"] },
+    { name: "Butterfly Guard",        kat: ["Ringen/Grappling"],                               audioOk: false, chaosOk: false, typ: "defense",   aliases: ["schmetterling guard", "bodenlage abwehr"] },
+    { name: "Armhebel",               kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, chaosOk: false, typ: "griff",     aliases: ["arm strecken", "arm sperren", "armbar"] },
+    { name: "Beinhebel-Ansatz",       kat: ["Ringen/Grappling"],                               audioOk: false, chaosOk: false, typ: "griff",     aliases: ["bein sperren", "fußhebel vorbereitung"] },
     // ── Karate/TKD ───────────────────────────────────────────────
-    { name: "Rückfaustschlag",        kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["faust rückseite", "backfist"] },
-    { name: "Handkantenschlag",       kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["karateschlag", "shuto", "handkante"] },
-    { name: "Spinning Hook Kick",     kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["drehkick", "haken kick drehung", "hook kick drehen"] },
-    { name: "Axtkick",                kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["fallender kick", "kick von oben", "hammer kick"] },
-    { name: "Gedan Barai",            kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["tiefblock", "abwehr unten", "low block"] },
-    { name: "Oi Zuki",                kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["laufpunch", "schrittschlag", "stepping punch"] },
+    { name: "Rückfaustschlag",        kat: ["Karate/TKD"],                                     audioOk: false, chaosOk: false, typ: "schlag",    aliases: ["faust rückseite", "backfist"] },
+    { name: "Handkantenschlag",       kat: ["Karate/TKD"],                                     audioOk: false, chaosOk: false, typ: "schlag",    aliases: ["karateschlag", "shuto", "handkante"] },
+    { name: "Spinning Hook Kick",     kat: ["Karate/TKD"],                                     audioOk: false, chaosOk: false, typ: "kick",      aliases: ["drehkick", "haken kick drehung"] },
+    { name: "Axtkick",                kat: ["Karate/TKD"],                                     audioOk: false, chaosOk: false, typ: "kick",      aliases: ["fallender kick", "kick von oben"] },
+    { name: "Gedan Barai",            kat: ["Karate/TKD"],                                     audioOk: false, chaosOk: false, typ: "defense",   aliases: ["tiefblock", "abwehr unten", "low block"] },
+    { name: "Oi Zuki",                kat: ["Karate/TKD"],                                     audioOk: false, chaosOk: false, typ: "schlag",    aliases: ["laufpunch", "schrittschlag"] },
 ];
 
 const proSinnvolleKombis = {
@@ -931,7 +968,13 @@ function waehleTrainingFilter(kat) {
     }
 
     document.getElementById("trainingFilterDropdown").classList.remove("show");
+    localStorage.setItem('fightvault_training_filter', kat);
     aktualisiereTrainingMetaStatusTexte();
+}
+
+function ladeTrainingFilter() {
+    let gespeicherter = localStorage.getItem('fightvault_training_filter');
+    if (gespeicherter) waehleTrainingFilter(gespeicherter);
 }
 
 function aktualisiereTrainingMetaStatusTexte() {
@@ -1119,19 +1162,50 @@ function toggleAudioLoop() {
 }
 
 function generiereZufallsKombiAusDB() {
-    let verfuegbar = technikenDatenbank;
+    let katName = '';
     if (aktuellerTrainingFilter !== 'Alle') {
-        let reinerKatName = aktuellerTrainingFilter.replace(/[🥊🔥🤼🥋\s]/gu, '');
-        verfuegbar = technikenDatenbank.filter(t => t.kat.includes(reinerKatName));
+        katName = aktuellerTrainingFilter.replace(/[🥊🔥🤼🥋\s]/gu, '');
     }
-    if (verfuegbar.length === 0) verfuegbar = technikenDatenbank;
 
-    let laenge = Math.floor(Math.random() * 3) + 2;
-    let kombi = [];
-    for (let i = 0; i < laenge; i++) {
-        kombi.push(verfuegbar[Math.floor(Math.random() * verfuegbar.length)].name);
+    let alle = katName
+        ? technikenDatenbank.filter(t => t.kat.includes(katName) && t.chaosOk)
+        : technikenDatenbank.filter(t => t.chaosOk);
+
+    if (alle.length === 0) alle = technikenDatenbank.filter(t => t.chaosOk);
+
+    let schlaege = alle.filter(t => t.typ === 'schlag');
+    let kicks    = alle.filter(t => t.typ === 'kick');
+    let knie     = alle.filter(t => t.typ === 'knie');
+    let defense  = alle.filter(t => t.typ === 'defense');
+
+    function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // Sinnvolle Muster: 2-4 Techniken, Kicks nicht direkt aufeinander
+    let muster = [
+        // 2er Kombis
+        () => [rand(schlaege), rand(kicks)],
+        () => [rand(schlaege), rand(schlaege)],
+        () => [rand(kicks),    rand(schlaege)],
+        // 3er Kombis
+        () => [rand(schlaege), rand(schlaege), rand(kicks)],
+        () => [rand(schlaege), rand(kicks),    rand(schlaege)],
+        () => [rand(kicks),    rand(schlaege), rand(schlaege)],
+        () => [rand(schlaege), rand(schlaege), rand(schlaege)],
+        // 4er Kombis
+        () => [rand(schlaege), rand(schlaege), rand(kicks),    rand(schlaege)],
+        () => [rand(schlaege), rand(kicks),    rand(schlaege), rand(schlaege)],
+    ];
+
+    // Knie nur wenn verfügbar
+    if (knie.length > 0) {
+        muster.push(() => [rand(schlaege), rand(schlaege), rand(knie)]);
+        muster.push(() => [rand(kicks),    rand(schlaege), rand(knie)]);
     }
-    return kombi.join(" ➔ ");
+
+    let gewähltMuster = muster[Math.floor(Math.random() * muster.length)];
+    let kombi = gewähltMuster().filter(Boolean);
+
+    return kombi.map(t => t.name).join(" ➔ ");
 }
 
 function runAudioLoopSchritt() {
@@ -1200,9 +1274,13 @@ function runChaosSchritt() {
     let verfuegbareTechniken = technikenDatenbank;
     if (aktuellerTrainingFilter !== 'Alle') {
         let reinerKatName = aktuellerTrainingFilter.replace(/[🥊🔥🤼🥋\s]/gu, '');
-        verfuegbareTechniken = technikenDatenbank.filter(t => t.kat.includes(reinerKatName));
+        verfuegbareTechniken = technikenDatenbank.filter(t =>
+            t.kat.includes(reinerKatName) && t.chaosOk
+        );
+    } else {
+        verfuegbareTechniken = technikenDatenbank.filter(t => t.chaosOk);
     }
-    if (verfuegbareTechniken.length === 0) verfuegbareTechniken = technikenDatenbank;
+    if (verfuegbareTechniken.length === 0) verfuegbareTechniken = technikenDatenbank.filter(t => t.chaosOk);
 
     let randomTech = verfuegbareTechniken[Math.floor(Math.random() * verfuegbareTechniken.length)];
     document.getElementById("chaosDisplay").innerText = randomTech.name;
@@ -1402,6 +1480,19 @@ function drumRollerInit() {
         drumApply();
     });
 
+    // Klick auf Nachbarzahlen → eine Stufe vor/zurück
+    roller.addEventListener("click", (e) => {
+        let item = e.target.closest(".drum-item");
+        if (!item) return;
+        let idx = parseInt(item.dataset.index);
+        if (isNaN(idx) || idx === drumIndex) return;
+        drumIndex = idx > drumIndex
+            ? Math.min(drumIndex + 1, rundenWerte.length - 1)
+            : Math.max(drumIndex - 1, 0);
+        drumApply();
+        haptic.light();
+    });
+
     // ── Mausrad ────────────────────────────────────────────────
     roller.parentElement.addEventListener("wheel", (e) => {
         e.preventDefault();
@@ -1463,17 +1554,26 @@ function stoppeTimer() {
 
 function resetTimer() {
     stoppeTimer();
-    istArbeitszeit  = true;
-    timerSekunden   = 180;
-    aktuelleRunde   = 1;
-    document.getElementById("timerStatus").innerText = "BEREIT";
+    istArbeitszeit = true;
+    timerSekunden  = zeitStufen[aktuelleZeitStufe][0];
+    aktuelleRunde  = 1;
+    document.getElementById("timerStatus").innerText   = "BEREIT";
     document.getElementById("timerStatus").style.color = "var(--text-dim)";
     let kreis = document.getElementById("timerCircleProgress");
-    if (kreis) { kreis.style.strokeDashoffset = 0; kreis.className = "timer-circle-progress"; }
+    if (kreis) { 
+        kreis.style.strokeDashoffset = 0; 
+        kreis.style.stroke = "";
+        kreis.className = "timer-circle-progress"; 
+    }
+    let kreisHg = document.querySelector(".timer-circle-bg");
+    if (kreisHg) kreisHg.className = "timer-circle-bg";
     renderTimerDisplay();
 }
 
 function handleTimerWechsel() {
+    let kreisHg = document.querySelector(".timer-circle-bg");
+    let kreis   = document.getElementById("timerCircleProgress");
+
     if (istArbeitszeit) {
         istArbeitszeit = false;
         spieleBoxglocke(3);
@@ -1483,15 +1583,17 @@ function handleTimerWechsel() {
             stoppeTimer();
             document.getElementById("timerStatus").innerText   = "FERTIG 🏆";
             document.getElementById("timerStatus").style.color = "var(--green)";
-            let kreis = document.getElementById("timerCircleProgress");
-            if (kreis) kreis.classList.add("done-mode");
+            if (kreis)   kreis.className   = "timer-circle-progress done-mode";
+            if (kreisHg) kreisHg.className = "timer-circle-bg";
             stoppeSämtlicheTrainingsAktionen();
             return;
         }
 
-        timerSekunden = 60;
+        timerSekunden = zeitStufen[aktuelleZeitStufe][1];
         document.getElementById("timerStatus").innerText   = "PAUSE";
-        document.getElementById("timerStatus").style.color = "var(--gold)";
+        document.getElementById("timerStatus").style.color = "#00c853";
+        if (kreis)   kreis.className   = "timer-circle-progress pause-mode";
+        if (kreisHg) kreisHg.className = "timer-circle-bg pause-mode";
         // Trainer-Status merken und stoppen
         let audioWarAktiv = audioLoopLaeuft;
         let chaosWarAktiv = chaosTrainerLaeuft;
@@ -1505,9 +1607,11 @@ function handleTimerWechsel() {
         aktuelleRunde++;
         spieleBoxglocke(1);
         haptic.double();
+        timerSekunden = zeitStufen[aktuelleZeitStufe][0];
         document.getElementById("timerStatus").innerText   = "WORK 🥊";
         document.getElementById("timerStatus").style.color = "var(--orange)";
-        // Trainer wieder starten falls vorher aktiv
+        if (kreis)   kreis.className   = "timer-circle-progress";
+        if (kreisHg) kreisHg.className = "timer-circle-bg";
         if (window._audioWarAktiv) toggleAudioLoop();
         if (window._chaosWarAktiv) toggleChaosTrainer();
         window._audioWarAktiv = false;
@@ -1528,13 +1632,17 @@ function renderTimerDisplay() {
 
     // Kreis-Progress updaten
     let kreis = document.getElementById("timerCircleProgress");
-    if (kreis) {
-        let maxSek = istArbeitszeit ? 180 : 60;
+    if (kreis && !kreis.classList.contains("done-mode")) {
+        let maxSek = istArbeitszeit
+            ? zeitStufen[aktuelleZeitStufe][0]
+            : zeitStufen[aktuelleZeitStufe][1];
         let progress = timerSekunden / maxSek;
-        let umfang = 2 * Math.PI * 72; // r=72
+        let umfang = 2 * Math.PI * 72;
         kreis.style.strokeDashoffset = umfang * (1 - progress);
-        kreis.className = "timer-circle-progress" +
-            (!istArbeitszeit ? " pause-mode" : "");
+        kreis.className = "timer-circle-progress" + (!istArbeitszeit ? " pause-mode" : "");
+        kreis.style.stroke = istArbeitszeit ? "var(--orange)" : "#00c853";
+        let kreisHg = document.querySelector(".timer-circle-bg");
+        if (kreisHg) kreisHg.className = "timer-circle-bg" + (!istArbeitszeit ? " pause-mode" : "");
     }
 }
 
@@ -1613,4 +1721,6 @@ window.addEventListener('DOMContentLoaded', () => {
     drumRollerInit();
     initInputTouchHandler();
     initSwipeNavigation();
+    aktualisiereZeitAnzeige();
+    ladeTrainingFilter();
 });
