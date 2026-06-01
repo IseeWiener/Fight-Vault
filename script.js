@@ -31,29 +31,61 @@ let isLongPressTriggered = false;
 
 // ── Datenbank ────────────────────────────────────────────────────────────────
 const technikenDatenbank = [
-    { name: "Jab",               kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Cross",             kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Linker Haken",      kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Rechter Haken",     kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Linker Uppercut",   kat: ["Boxen", "Kick-/Thaiboxen", "MMA"] },
-    { name: "Rechter Uppercut",  kat: ["Boxen", "Kick-/Thaiboxen", "MMA"] },
-    { name: "Overhand",          kat: ["Boxen", "Kick-/Thaiboxen", "MMA"] },
-    { name: "Meiden",            kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Block",             kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Linker Ellbogen",   kat: ["Kick-/Thaiboxen", "MMA"] },
-    { name: "Rechter Ellbogen",  kat: ["Kick-/Thaiboxen", "MMA"] },
-    { name: "Linkes Knie",       kat: ["Kick-/Thaiboxen", "MMA"] },
-    { name: "Rechtes Knie",      kat: ["Kick-/Thaiboxen", "MMA"] },
-    { name: "Linker Lowkick",    kat: ["Kick-/Thaiboxen", "MMA"] },
-    { name: "Linker Midkick",    kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Linker Highkick",   kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Frontkick",         kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Rechter Lowkick",   kat: ["Kick-/Thaiboxen", "MMA"] },
-    { name: "Rechter Midkick",   kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Rechter Highkick",  kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"] },
-    { name: "Sprawl",            kat: ["MMA", "Ringen/Grappling"] },
-    { name: "Takedown",          kat: ["MMA", "Ringen/Grappling"] },
-    { name: "Clinch",            kat: ["Kick-/Thaiboxen", "MMA", "Ringen/Grappling"] }
+    // ── Boxen ─────────────────────────────────────────────────────
+    { name: "Jab",                    kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["linke gerade", "führhand", "linker stoß"] },
+    { name: "Cross",                  kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["rechte gerade", "schlaghand", "rechter stoß", "gerade rechts"] },
+    { name: "Linker Haken",           kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["linker schwinger", "haken links"] },
+    { name: "Rechter Haken",          kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["rechter schwinger", "haken rechts"] },
+    { name: "Linker Uppercut",        kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["linker aufwärtshaken", "aufwärts links", "kinnhaken links"] },
+    { name: "Rechter Uppercut",       kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["rechter aufwärtshaken", "aufwärts rechts", "kinnhaken rechts"] },
+    { name: "Linker Körperhaken",     kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["haken auf den körper links", "leberhaken", "körper links"] },
+    { name: "Rechter Körperhaken",    kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: true,  aliases: ["haken auf den körper rechts", "körper rechts"] },
+    { name: "Overhand",               kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["bogenrechte", "überkopfschlag", "hammer rechts"] },
+    { name: "Slip Links",             kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["ausweichen links", "kopf links", "dodge links"] },
+    { name: "Slip Rechts",            kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["ausweichen rechts", "kopf rechts", "dodge rechts"] },
+    { name: "Rollbewegung",           kat: ["Boxen", "Kick-/Thaiboxen", "MMA"],                audioOk: false, aliases: ["ducken", "rollen", "bob", "unterlaufen"] },
+    { name: "Meiden",                 kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["zurückweichen", "zurück", "step back", "rückwärts"] },
+    { name: "Block",                  kat: ["Boxen", "Kick-/Thaiboxen", "MMA", "Karate/TKD"], audioOk: true,  aliases: ["decken", "abblock", "abwehr", "schutz"] },
+    // ── Kick-/Thaiboxen ──────────────────────────────────────────
+    { name: "Linker Ellbogen",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["ellbogen links"] },
+    { name: "Rechter Ellbogen",       kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["ellbogen rechts"] },
+    { name: "Linkes Knie",            kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["knie links"] },
+    { name: "Rechtes Knie",           kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["knie rechts"] },
+    { name: "Aufwärtsknie",           kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["knie nach oben", "knie hoch"] },
+    { name: "Fliegendes Knie",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["springendes knie", "jump knie"] },
+    { name: "Linker Lowkick",         kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["tritt aufs bein links", "beintritt links", "kick uf die oberschenkel links"] },
+    { name: "Linker Midkick",         kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["tritt auf den körper links", "körperkick links", "kick auf die rippen links"] },
+    { name: "Linker Highkick",        kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["kopfkick links", "tritt auf den kopf links", "kick hoch links"] },
+    { name: "Linker Bodykick",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["körpertritt links", "rippenkick links"] },
+    { name: "Rechter Lowkick",        kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["tritt aufs bein rechts", "beintritt rechts", "kick auf die oberschenkel rechts"] },
+    { name: "Rechter Midkick",        kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["tritt auf den körper rechts", "körperkick rechts", "kick auf die rippen rechts"] },
+    { name: "Rechter Highkick",       kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["kopfkick rechts", "tritt auf den kopf rechts", "kick hoch rechts"] },
+    { name: "Rechter Bodykick",       kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: true,  aliases: ["körpertritt rechts", "rippenkick rechts"] },
+    { name: "Frontkick",              kat: ["Kick-/Thaiboxen", "MMA", "Karate/TKD"],           audioOk: true,  aliases: ["vorwärtskick", "gerader tritt", "push kick", "stampftritt"] },
+    { name: "Teep",                   kat: ["Kick-/Thaiboxen", "MMA"],                         audioOk: false, aliases: ["schubkick", "push kick", "abstandskick"] },
+    { name: "Clinch",                 kat: ["Kick-/Thaiboxen", "MMA", "Ringen/Grappling"],     audioOk: true,  aliases: ["umklammern", "festhalten", "nahkampf greifen"] },
+    // ── MMA ──────────────────────────────────────────────────────
+    { name: "Sprawl",                 kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["takedown abwehr", "beine wegziehen", "sprawlen"] },
+    { name: "Takedown",               kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["zu boden bringen", "wurf", "niederringen"] },
+    { name: "Shoot",                  kat: ["MMA"],                                            audioOk: false, aliases: ["anlauf zum takedown", "einschießen", "beine greifen anlauf"] },
+    { name: "Dirty Boxing",           kat: ["MMA"],                                            audioOk: false, aliases: ["schläge im clinch", "nahkampf boxen"] },
+    { name: "Wandarbeit",             kat: ["MMA"],                                            audioOk: false, aliases: ["gegen die wand drücken", "cage work"] },
+    { name: "Kimura-Griff",           kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["schultergriff", "armhebel hinten"] },
+    { name: "Guillotine",             kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["würgegriff vorne", "kopfgriff"] },
+    // ── Ringen/Grappling ─────────────────────────────────────────
+    { name: "Hüftwurf",              kat: ["Ringen/Grappling"],                               audioOk: false, aliases: ["über die hüfte werfen", "judowurf"] },
+    { name: "Doppelbeinsatz",         kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["beide beine greifen", "double leg"] },
+    { name: "Einseinangriff",         kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["ein bein greifen", "single leg"] },
+    { name: "Butterfly Guard",        kat: ["Ringen/Grappling"],                               audioOk: false, aliases: ["schmetterling guard", "bodenlage abwehr"] },
+    { name: "Armhebel",               kat: ["MMA", "Ringen/Grappling"],                        audioOk: false, aliases: ["arm strecken", "arm sperren", "armbar"] },
+    { name: "Beinhebel-Ansatz",       kat: ["Ringen/Grappling"],                               audioOk: false, aliases: ["bein sperren", "fußhebel vorbereitung"] },
+    // ── Karate/TKD ───────────────────────────────────────────────
+    { name: "Rückfaustschlag",        kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["faust rückseite", "backfist"] },
+    { name: "Handkantenschlag",       kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["karateschlag", "shuto", "handkante"] },
+    { name: "Spinning Hook Kick",     kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["drehkick", "haken kick drehung", "hook kick drehen"] },
+    { name: "Axtkick",                kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["fallender kick", "kick von oben", "hammer kick"] },
+    { name: "Gedan Barai",            kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["tiefblock", "abwehr unten", "low block"] },
+    { name: "Oi Zuki",                kat: ["Karate/TKD"],                                     audioOk: false, aliases: ["laufpunch", "schrittschlag", "stepping punch"] },
 ];
 
 const proSinnvolleKombis = {
@@ -62,31 +94,48 @@ const proSinnvolleKombis = {
         ["Jab", "Meiden", "Rechter Uppercut", "Rechter Haken"],
         ["Cross", "Linker Haken", "Cross"],
         ["Jab", "Jab", "Cross", "Block"],
-        ["Linker Haken", "Rechter Uppercut", "Linker Haken", "Cross"]
+        ["Linker Haken", "Rechter Uppercut", "Linker Haken", "Cross"],
+        ["Jab", "Slip Rechts", "Linker Körperhaken", "Cross"],
+        ["Cross", "Rollbewegung", "Linker Uppercut", "Rechter Haken"],
+        ["Jab", "Cross", "Slip Links", "Rechter Körperhaken", "Cross"]
     ],
     "Kick-/Thaiboxen": [
         ["Jab", "Cross", "Linker Midkick"],
         ["Rechter Lowkick", "Linker Haken", "Rechter Midkick"],
         ["Jab", "Linker Haken", "Clinch", "Rechtes Knie"],
         ["Block", "Cross", "Rechter Lowkick"],
-        ["Frontkick", "Cross", "Rechter Lowkick"]
+        ["Frontkick", "Cross", "Rechter Lowkick"],
+        ["Teep", "Jab", "Cross", "Linker Bodykick"],
+        ["Rechter Lowkick", "Jab", "Clinch", "Aufwärtsknie"],
+        ["Slip Links", "Linker Ellbogen", "Rechtes Knie"],
+        ["Jab", "Cross", "Linker Haken", "Rechter Lowkick"],
+        ["Fliegendes Knie", "Cross", "Linker Highkick"]
     ],
     "MMA": [
         ["Jab", "Cross", "Takedown"],
         ["Linker Haken", "Rechter Lowkick", "Sprawl"],
         ["Cross", "Clinch", "Linker Ellbogen", "Takedown"],
         ["Sprawl", "Rechtes Knie", "Linker Uppercut"],
-        ["Jab", "Overhand", "Clinch"]
+        ["Jab", "Overhand", "Clinch"],
+        ["Shoot", "Takedown", "Wandarbeit"],
+        ["Dirty Boxing", "Clinch", "Kimura-Griff"],
+        ["Jab", "Cross", "Doppelbeinsatz"]
     ],
     "Ringen/Grappling": [
         ["Takedown", "Sprawl", "Clinch"],
         ["Clinch", "Takedown"],
-        ["Sprawl", "Clinch", "Takedown"]
+        ["Sprawl", "Clinch", "Takedown"],
+        ["Doppelbeinsatz", "Hüftwurf"],
+        ["Einseinangriff", "Armhebel"],
+        ["Butterfly Guard", "Beinhebel-Ansatz"]
     ],
     "Karate/TKD": [
         ["Jab", "Frontkick", "Cross"],
         ["Meiden", "Linker Highkick", "Linker Haken"],
-        ["Rechter Midkick", "Cross", "Frontkick"]
+        ["Rechter Midkick", "Cross", "Frontkick"],
+        ["Oi Zuki", "Gedan Barai", "Rückfaustschlag"],
+        ["Axtkick", "Cross", "Handkantenschlag"],
+        ["Spinning Hook Kick", "Jab", "Cross"]
     ]
 };
 
@@ -115,6 +164,12 @@ function selectFromDropdown(kategorie, emoji) {
 }
 
 window.onclick = function (event) {
+    // Custom Autocomplete schließen
+    if (!event.target.closest('.custom-autocomplete')) {
+        let vl = document.getElementById("vorschlagsListe");
+        if (vl) vl.classList.remove("open");
+    }
+
     if (!event.target.matches('.btn-dropdown-toggle')) {
         document.querySelectorAll(".dropdown-menu").forEach(dd => {
             if (dd.classList.contains('show') && dd.id !== 'trainingFilterDropdown') {
@@ -162,6 +217,8 @@ function switchTrainingMode(modeId, button) {
 }
 
 // ── Technik-Eingabe ───────────────────────────────────────────────────────────
+let aktuelleTechnikListe = [];
+
 function filterEingabeTechniken(kategorie, button, vollerNameMitEmoji = 'Alle') {
     gewaehlteErstellungsKategorie = kategorie;
     vollerKategorieNameMitEmoji = vollerNameMitEmoji;
@@ -178,30 +235,73 @@ function filterEingabeTechniken(kategorie, button, vollerNameMitEmoji = 'Alle') 
 
     diceBtn.style.display = (kategorie === 'Alle' || !kategorie) ? "none" : "flex";
 
-    let datalist = document.getElementById("techniken");
     let inputFeld = document.getElementById("kombiInput");
-    datalist.innerHTML = "";
 
     if (kategorie === 'Alle' || !kategorie) {
         inputFeld.placeholder = "Technik wählen, tippen oder Kombi einfügen...";
-        technikenDatenbank.forEach(t => {
-            datalist.innerHTML += `<option value="${t.name}">`;
-        });
+        aktuelleTechnikListe = technikenDatenbank.map(t => t.name);
     } else {
         inputFeld.placeholder = `Technik für ${kategorie} wählen...`;
-        technikenDatenbank.forEach(t => {
-            if (t.kat.includes(kategorie)) {
-                datalist.innerHTML += `<option value="${t.name}">`;
-            }
-        });
+        aktuelleTechnikListe = technikenDatenbank.filter(t => t.kat.includes(kategorie)).map(t => t.name);
     }
+}
+
+function zeigeVorschlaege() {
+    aktualisiereVorschlagsListe(document.getElementById("kombiInput").value.trim());
+}
+
+function aktualisiereVorschlagsListe(wert) {
+    let liste = document.getElementById("vorschlagsListe");
+    liste.innerHTML = "";
+
+    let gefiltert;
+    if (wert.length === 0) {
+        gefiltert = aktuelleTechnikListe;
+    } else {
+        let wertLower = wert.toLowerCase();
+        // Suche in Name UND Aliases
+        gefiltert = technikenDatenbank
+            .filter(t => {
+                if (!aktuelleTechnikListe.includes(t.name)) return false;
+                if (t.name.toLowerCase().includes(wertLower)) return true;
+                if (t.aliases && t.aliases.some(a => a.toLowerCase().includes(wertLower))) return true;
+                return false;
+            })
+            .map(t => t.name);
+    }
+
+    if (gefiltert.length === 0) { liste.classList.remove("open"); return; }
+
+    gefiltert.forEach(technik => {
+        let item = document.createElement("div");
+        item.className = "vorschlags-item";
+
+        if (wert.length > 0) {
+            let regex = new RegExp(`(${wert})`, 'gi');
+            item.innerHTML = technik.replace(regex, '<mark>$1</mark>');
+        } else {
+            item.innerText = technik;
+        }
+
+        item.addEventListener("mousedown", (e) => { e.preventDefault(); waehleVorschlag(technik); });
+        item.addEventListener("touchend",  (e) => { e.preventDefault(); waehleVorschlag(technik); });
+        liste.appendChild(item);
+    });
+
+    liste.classList.add("open");
+}
+
+function waehleVorschlag(technik) {
+    fuegeTechnikHinzu(technik);
+    document.getElementById("kombiInput").value = "";
+    document.getElementById("vorschlagsListe").classList.remove("open");
+    document.getElementById("kombiInput").blur(); // Fokus wegnehmen → Dropdown bleibt zu
 }
 
 function checkInput() {
     let input = document.getElementById("kombiInput");
     let wert = input.value.trim();
 
-    // Paste-Erkennung: Trennzeichen ➔ / -> / |
     if (wert.includes("➔") || wert.includes("->") || wert.includes("|")) {
         let teile = wert.split(/\s*➔\s*|\s*->\s*|\s*\|\s*/);
         aktuelleKombi = [];
@@ -216,15 +316,11 @@ function checkInput() {
         });
         input.value = "";
         renderVorschau();
+        document.getElementById("vorschlagsListe").classList.remove("open");
         return;
     }
 
-    // Autovervollständigung
-    if (erlaubteTechniken.some(t => t.toLowerCase() === wert.toLowerCase())) {
-        let echteTechnik = erlaubteTechniken.find(t => t.toLowerCase() === wert.toLowerCase());
-        fuegeTechnikHinzu(echteTechnik);
-        input.value = "";
-    }
+    aktualisiereVorschlagsListe(wert);
 }
 
 function checkEnter(event) {
@@ -234,6 +330,7 @@ function checkEnter(event) {
         if (wert.length > 0) {
             fuegeTechnikHinzu(saubereEingabeFormatierung(wert));
             input.value = "";
+            document.getElementById("vorschlagsListe").classList.remove("open");
         }
     }
 }
@@ -270,8 +367,15 @@ function renderVorschau() {
     if (aktuelleKombi.length === 0) {
         vorschau.innerHTML = `<i>Noch keine Technik hinzugefügt...</i>`;
         vorschau.classList.remove("aktiviert");
-        saveBtn.disabled = true;
-        info.innerText = "Füge mindestens 2 Techniken hinzu oder füge eine Kopie ein";
+        saveBtn.disabled  = true;
+        info.innerText    = "Füge mindestens 2 Techniken hinzu oder füge eine Kopie ein";
+
+        // Bearbeitungsmodus abbrechen falls aktiv
+        if (bearbeiteteKombiId) {
+            bearbeiteteKombiId  = null;
+            saveBtn.innerText   = "Im Safe ablegen";
+            saveBtn.onclick     = () => oeffneSpeicherDialog();
+        }
     } else {
         vorschau.innerText = historischeKombiFormatierung(aktuelleKombi);
         vorschau.classList.add("aktiviert");
@@ -398,6 +502,60 @@ function loeschAbbrechen() {
     document.getElementById("loeschModal").classList.remove("open");
 }
 
+let bearbeiteteKombiId = null;
+
+function bearbeiteKombi(id) {
+    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    if (!kombi) return;
+
+    bearbeiteteKombiId = id;
+
+    // Kombi in den Eingabebereich laden
+    aktuelleKombi = kombi.text.split(" ➔ ");
+
+    // Kategorie setzen
+    gewaehlteErstellungsKategorie = kombi.kategorie.replace(/[🥊🔥🤼🥋\s]/gu, '').trim();
+    vollerKategorieNameMitEmoji   = kombi.kategorie;
+
+    // Zum Safe-Tab wechseln
+    switchTab('safe-tab', document.getElementById('navBtnSafe'));
+
+    // Vorschau rendern
+    renderVorschau();
+
+    // Save-Button auf "Speichern" umstellen
+    let saveBtn = document.getElementById("saveBtn");
+    saveBtn.innerText = "✏️ Änderungen speichern";
+    saveBtn.onclick   = () => speichereBearbeitung();
+
+    // Scroll nach oben
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    zeigeToast("✏️ Kombi wird bearbeitet – ändere und speichere!");
+}
+
+function speichereBearbeitung() {
+    if (!bearbeiteteKombiId || aktuelleKombi.length < 2) return;
+
+    let kombi = alleGespeichertenKombis.find(k => k.id === bearbeiteteKombiId);
+    if (!kombi) return;
+
+    kombi.text = historischeKombiFormatierung(aktuelleKombi);
+    saveSafeToLocalStorage();
+    baueTresorUndFilterAuf();
+
+    // Zurücksetzen
+    bearbeiteteKombiId = null;
+    aktuelleKombi = [];
+    renderVorschau();
+
+    // Save-Button zurücksetzen
+    let saveBtn = document.getElementById("saveBtn");
+    saveBtn.innerText = "Im Safe ablegen";
+    saveBtn.onclick   = () => oeffneSpeicherDialog();
+
+    zeigeToast("✅ Kombination gespeichert!");
+}
+
 function kopiereKombi(event, text, button) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
 
@@ -505,6 +663,7 @@ function baueTresorUndFilterAuf() {
                     <div style="font-weight:bold; font-size:0.95rem; color:#fff;">${k.text}</div>
                 </div>
                 <div class="action-btns">
+                    <button class="icon-btn" onclick="bearbeiteKombi(${k.id})" title="Bearbeiten">✏️</button>
                     <button class="icon-btn" onclick="sendeKombiZuAudioCoach('${safeText}')" title="An Audio-Coach senden" style="opacity:0.85;">⚡</button>
                     <button class="icon-btn" ontouchstart="kopiereKombi(event, '${safeText}', this)" onclick="kopiereKombi(event, '${safeText}', this)" title="Kopieren">📋</button>
                     <button class="icon-btn" onclick="loescheKombi(${k.id})" style="color:#ff3333;" title="Löschen">🗑️</button>
@@ -686,7 +845,16 @@ function toggleAudioLoop() {
         stoppeAudioLoop();
     } else {
         let pool = holeGefilterteKombisFuerWorkout();
-        if (pool.length === 0) { alert("Keine Kombinationen zum Loopen in dieser Kategorie vorhanden!"); return; }
+        let mixerAktiv = document.getElementById("audioMixerCheckbox").checked;
+
+        if (pool.length === 0 && !mixerAktiv) {
+            zeigeToast("⚠️ Kein Kombi im Tresor für diesen Filter!");
+            return;
+        }
+
+        if (pool.length === 0 && mixerAktiv) {
+            zeigeToast("🎲 Tresor leer – generiere Zufalls-Kombis!");
+        }
 
         audioLoopLaeuft = true;
         let btn = document.getElementById("audioLoopBtn");
@@ -700,18 +868,39 @@ function toggleAudioLoop() {
     }
 }
 
+function generiereZufallsKombiAusDB() {
+    let verfuegbar = technikenDatenbank;
+    if (aktuellerTrainingFilter !== 'Alle') {
+        let reinerKatName = aktuellerTrainingFilter.replace(/[🥊🔥🤼🥋\s]/gu, '');
+        verfuegbar = technikenDatenbank.filter(t => t.kat.includes(reinerKatName));
+    }
+    if (verfuegbar.length === 0) verfuegbar = technikenDatenbank;
+
+    let laenge = Math.floor(Math.random() * 3) + 2;
+    let kombi = [];
+    for (let i = 0; i < laenge; i++) {
+        kombi.push(verfuegbar[Math.floor(Math.random() * verfuegbar.length)].name);
+    }
+    return kombi.join(" ➔ ");
+}
+
 function runAudioLoopSchritt() {
     if (istGeradeAmSprechen) return;
     let pool = holeGefilterteKombisFuerWorkout();
-    if (pool.length === 0) return;
-
     let mixerAktiv = document.getElementById("audioMixerCheckbox").checked;
 
-    if (mixerAktiv || !aktuellerAudioKombiText) {
-        let kombi = pool[Math.floor(Math.random() * pool.length)];
-        baueAudioSatzStruktur(kombi.text);
-        sprichText(kombi.text);
-    } else {
+    if (mixerAktiv) {
+        let kombiText;
+        if (pool.length === 0) {
+            // Tresor leer → zufällige Kombi aus Datenbank generieren
+            kombiText = generiereZufallsKombiAusDB();
+        } else {
+            // Tresor hat Kombis → gespeicherte nutzen
+            kombiText = pool[Math.floor(Math.random() * pool.length)].text;
+        }
+        baueAudioSatzStruktur(kombiText);
+        sprichText(kombiText);
+    } else if (aktuellerAudioKombiText) {
         baueAudioSatzStruktur(aktuellerAudioKombiText);
         sprichText(aktuellerAudioKombiText);
     }
@@ -723,7 +912,7 @@ function stoppeAudioLoop() {
     if (audioQueueTimeout) clearTimeout(audioQueueTimeout);
 
     let btn = document.getElementById("audioLoopBtn");
-    if (btn) { btn.innerText = "Loop Start"; btn.style.color = "#666"; btn.style.borderColor = "#222"; }
+    if (btn) { btn.innerText = "Loop Start"; btn.style.color = "#666"; btn.style.borderColor = "#222"; btn.style.background = ""; }
 
     window.speechSynthesis.cancel();
     istGeradeAmSprechen = false;
@@ -802,20 +991,141 @@ function stoppeSämtlicheTrainingsAktionen() {
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
-function updateRundenVorgabe() {
-    maxRundenVorgabe = parseInt(document.getElementById("timerRundenSelect").value);
+let audioCtx = null;
+
+function spieleBoxglocke(anzahlSchlaege = 1) {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function einzelnerSchlag(zeitversatz) {
+            let oscillator = audioCtx.createOscillator();
+            let gainNode   = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime + zeitversatz);
+            oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + zeitversatz + 1.2);
+
+            gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime + zeitversatz);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + zeitversatz + 1.5);
+
+            oscillator.start(audioCtx.currentTime + zeitversatz);
+            oscillator.stop(audioCtx.currentTime + zeitversatz + 1.5);
+        }
+
+        for (let i = 0; i < anzahlSchlaege; i++) {
+            einzelnerSchlag(i * 0.4);
+        }
+    } catch(e) {
+        console.log("Audio nicht verfügbar:", e);
+    }
+}
+
+// ── Toast Benachrichtigung ────────────────────────────────────────────────────
+let toastTimeout = null;
+
+function zeigeToast(nachricht) {
+    let toast = document.getElementById("toastBanner");
+    toast.innerText = nachricht;
+    toast.classList.add("show");
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
+    if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+}
+
+// ── Drum Roller ───────────────────────────────────────────────────────────────
+const rundenWerte = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12];
+let drumIndex = 3;
+let drumStartX = 0;
+let drumStartOffset = 0;
+let drumIsDragging = false;
+const DRUM_ITEM_WIDTH = 60;
+
+function drumRollerInit() {
+    let roller = document.getElementById("drumRoller");
+    if (!roller) return;
+
+    roller.style.paddingLeft  = `calc(50% - ${DRUM_ITEM_WIDTH / 2}px)`;
+    roller.style.paddingRight = `calc(50% - ${DRUM_ITEM_WIDTH / 2}px)`;
+
+    drumSetzeIndex(drumIndex, false);
+
+    roller.addEventListener("mousedown",  drumOnStart);
+    roller.addEventListener("touchstart", drumOnStart, { passive: true });
+    roller.addEventListener("mousemove",  drumOnMove);
+    roller.addEventListener("touchmove",  drumOnMove, { passive: false });
+    roller.addEventListener("mouseup",    drumOnEnd);
+    roller.addEventListener("touchend",   drumOnEnd);
+    roller.addEventListener("mouseleave", drumOnEnd);
+
+    roller.parentElement.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        drumSetzeIndex(drumIndex + (e.deltaY > 0 ? 1 : -1), true);
+    }, { passive: false });
+}
+
+function drumGetX(e) {
+    return e.touches ? e.touches[0].clientX : e.clientX;
+}
+
+function drumOnStart(e) {
+    drumIsDragging = true;
+    drumStartX = drumGetX(e);
+    drumStartOffset = drumIndex * DRUM_ITEM_WIDTH;
+    document.getElementById("drumRoller").style.transition = "none";
+}
+
+function drumOnMove(e) {
+    if (!drumIsDragging) return;
+    if (e.cancelable) e.preventDefault();
+    let delta = drumStartX - drumGetX(e);
+    let neuIndex = Math.round((drumStartOffset + delta) / DRUM_ITEM_WIDTH);
+    neuIndex = Math.max(0, Math.min(rundenWerte.length - 1, neuIndex));
+    drumAktualisierPosition(neuIndex, false);
+}
+
+function drumOnEnd(e) {
+    if (!drumIsDragging) return;
+    drumIsDragging = false;
+    let delta = drumStartX - drumGetX(e);
+    let neuIndex = Math.round((drumStartOffset + delta) / DRUM_ITEM_WIDTH);
+    drumSetzeIndex(neuIndex, true);
+}
+
+function drumAktualisierPosition(index, mitAnimation) {
+    let roller = document.getElementById("drumRoller");
+    roller.style.transition = mitAnimation ? "transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none";
+    roller.style.transform = `translateX(${-index * DRUM_ITEM_WIDTH}px)`;
+
+    document.querySelectorAll(".drum-item").forEach((item, i) => {
+        item.classList.toggle("active", i === index);
+    });
+}
+
+function drumSetzeIndex(index, mitAnimation) {
+    drumIndex = Math.max(0, Math.min(rundenWerte.length - 1, index));
+    drumAktualisierPosition(drumIndex, mitAnimation);
+    maxRundenVorgabe = rundenWerte[drumIndex];
     resetTimer();
 }
+
+function setzeRunden(anzahl) { }
+function updateRundenVorgabe() { }
 
 function toggleTimer() {
     let btn = document.getElementById("timerStartBtn");
     if (timerLaeuft) {
         stoppeTimer();
     } else {
+        spieleBoxglocke(1); // 1x Glocke beim Start
         timerLaeuft = true;
         btn.innerText        = "Pause";
         btn.style.background = "linear-gradient(90deg, #ffcc00 0%, #d4aa00 100%)";
         document.getElementById("timerStatus").classList.add("pulse-active");
+        document.getElementById("timerStatus").innerText   = "🥊 Work";
+        document.getElementById("timerStatus").style.color = "#ff5500";
 
         timerInterval = setInterval(() => {
             timerSekunden--;
@@ -846,6 +1156,7 @@ function resetTimer() {
 function handleTimerWechsel() {
     if (istArbeitszeit) {
         istArbeitszeit = false;
+        spieleBoxglocke(3); // 3x Glocke = Rundenende
 
         if (maxRundenVorgabe > 0 && aktuelleRunde >= maxRundenVorgabe) {
             stoppeTimer();
@@ -861,6 +1172,7 @@ function handleTimerWechsel() {
     } else {
         istArbeitszeit = true;
         aktuelleRunde++;
+        spieleBoxglocke(1); // 1x Glocke = neue Runde startet
         timerSekunden = 180;
         document.getElementById("timerStatus").innerText   = "🥊 Work";
         document.getElementById("timerStatus").style.color = "#ff5500";
@@ -883,5 +1195,5 @@ function renderTimerDisplay() {
 window.addEventListener('DOMContentLoaded', () => {
     loadSafeFromLocalStorage();
     filterEingabeTechniken('Alle');
-    updateRundenVorgabe();
+    drumRollerInit();
 });
