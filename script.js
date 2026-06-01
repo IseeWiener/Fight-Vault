@@ -9,20 +9,13 @@ let aktiveKategorien = new Set();
 
 // ── Haptic Feedback ───────────────────────────────────────────────────────────
 const haptic = {
-    // Kurzes Tippen – normale Buttons, Modus wechseln
-    light:   () => navigator.vibrate && navigator.vibrate(30),
-    // Mittleres Feedback – Technik hinzufügen, Auswahl
-    medium:  () => navigator.vibrate && navigator.vibrate(50),
-    // Stärker – Speichern, Roulette-Ergebnis
-    heavy:   () => navigator.vibrate && navigator.vibrate(80),
-    // Doppel-Tap – Tab wechseln
-    double:  () => navigator.vibrate && navigator.vibrate([40, 60, 40]),
-    // Fehler – kurz-kurz-kurz
-    error:   () => navigator.vibrate && navigator.vibrate([80, 50, 80]),
-    // Erfolg – kurz dann lang
-    success: () => navigator.vibrate && navigator.vibrate([30, 60, 80]),
-    // Glocke – beim Timer
-    bell:    () => navigator.vibrate && navigator.vibrate([60, 80, 60, 80, 120]),
+    light:   () => navigator.vibrate && navigator.vibrate(12),
+    medium:  () => navigator.vibrate && navigator.vibrate(22),
+    heavy:   () => navigator.vibrate && navigator.vibrate(38),
+    double:  () => {},
+    error:   () => navigator.vibrate && navigator.vibrate([30, 25, 30]),
+    success: () => navigator.vibrate && navigator.vibrate([12, 25, 30]),
+    bell:    () => navigator.vibrate && navigator.vibrate([25, 40, 25, 40, 50]),
 };
 
 // Timer
@@ -395,6 +388,64 @@ function initInputTouchHandler() {
             }, 200);
         });
     }
+
+    // Paste Event – direkt abfangen für Multi-Kombi Import
+    input.addEventListener("paste", (e) => {
+        // readonly kurz entfernen damit Paste funktioniert
+        input.removeAttribute("readonly");
+
+        let eingefuegt = (e.clipboardData || window.clipboardData).getData("text");
+        if (!eingefuegt) return;
+        eingefuegt = eingefuegt.trim();
+
+        if (eingefuegt.startsWith("[") && eingefuegt.includes("➔")) {
+            e.preventDefault();
+            input.setAttribute("readonly", true);
+            verarbeiteKombiBlock(eingefuegt);
+        }
+    }, { passive: false });
+
+    // Fallback: nach kurzer Verzögerung Input-Wert prüfen (für manche Mobile Browser)
+    input.addEventListener("input", () => {
+        let wert = input.value.trim();
+        if (wert.startsWith("[") && wert.includes("➔")) {
+            input.value = "";
+            input.setAttribute("readonly", true);
+            verarbeiteKombiBlock(wert);
+        }
+    });
+}
+
+function verarbeiteKombiBlock(text) {
+    let zeilen = text.split("\n").map(z => z.trim()).filter(Boolean);
+    let kat    = zeilen[0].replace(/[\[\]]/g, '').trim();
+
+    let neueKombis = zeilen.slice(1).map(z => {
+        let bereinigt = z.replace(/^\d+\.\s*/, '').trim();
+        return (bereinigt.includes("➔") || bereinigt.includes("->")) ? bereinigt : null;
+    }).filter(Boolean);
+
+    if (neueKombis.length === 0) return;
+
+    let hinzugefuegt = 0;
+    neueKombis.forEach(text => {
+        if (!alleGespeichertenKombis.some(k => k.text === text)) {
+            alleGespeichertenKombis.push({
+                id: String(Date.now()) + Math.floor(Math.random()*1000),
+                text,
+                kategorie: kat,
+                isFav: false
+            });
+            hinzugefuegt++;
+        }
+    });
+
+    document.getElementById("kombiInput").value = "";
+    document.getElementById("vorschlagsListe").classList.remove("open");
+    saveSafeToLocalStorage();
+    baueTresorUndFilterAuf();
+    zeigeToast(`✅ ${hinzugefuegt} Kombis importiert`);
+    haptic.success();
 }
 
 function handleInputTap() {
@@ -517,7 +568,9 @@ function checkInput() {
     let wert = input.value.trim();
 
     if (wert.includes("➔") || wert.includes("->") || wert.includes("|")) {
-        let teile = wert.split(/\s*➔\s*|\s*->\s*|\s*\|\s*/);
+        // Nummerierung entfernen: "1. Jab ➔ Cross" → "Jab ➔ Cross"
+        let bereinigt = wert.replace(/^\d+\.\s*/, '');
+        let teile = bereinigt.split(/\s*➔\s*|\s*->\s*|\s*\|\s*/);
         aktuelleKombi = [];
         teile.forEach(t => {
             let sauber = t.trim();
@@ -655,7 +708,7 @@ function finaleSpeicherung(kategorieName) {
 
     if (existiertBereits) {
         haptic.error();
-        alert(`❌ Kombi abgelehnt:\n"${neuerKombiText}" liegt schon in deinem Tresor!`);
+        zeigeToast("⚠️ Diese Kombi liegt schon im Tresor!");
         aktuelleKombi = [];
         renderVorschau();
         schliesseSpeicherDialog();
@@ -839,7 +892,139 @@ function toggleFavorit(id) {
 function toggleKombiHighlight(event, element) {
     if (event.target.closest('.action-btns')) return;
     if (isLongPressTriggered) return;
+
+    let id = parseInt(element.dataset.kombiId);
+    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    if (!kombi) return;
+
+    // Prüfen ob bereits markierte Kombis eine andere Kategorie haben
+    let bereitsMarkierte = document.querySelectorAll('.highlighted-vault-item');
+    if (bereitsMarkierte.length > 0 && !element.classList.contains('highlighted-vault-item')) {
+        let ersteId = parseInt(bereitsMarkierte[0].dataset.kombiId);
+        let ersteKombi = alleGespeichertenKombis.find(k => k.id === ersteId);
+        if (ersteKombi && ersteKombi.kategorie !== kombi.kategorie) {
+            zeigeToast("⚠️ Nur gleiche Kategorien können zusammen markiert werden");
+            haptic.error();
+            return;
+        }
+    }
+
     element.classList.toggle('highlighted-vault-item');
+    aktualisiereMultiAktionsButton();
+}
+
+function aktualisiereMultiAktionsButton() {
+    let markierte = document.querySelectorAll('.highlighted-vault-item').length;
+    let btn = document.getElementById("multiAktionsBtn");
+    if (!btn) return;
+    if (markierte >= 2) {
+        btn.style.display = "flex";
+        btn.innerText = `${markierte} ausgewählt ›`;
+        haptic.light();
+    } else {
+        btn.style.display = "none";
+    }
+}
+
+function holeMarkierteIds() {
+    let ids = [];
+    document.querySelectorAll('.highlighted-vault-item').forEach(el => {
+        let id = el.dataset.kombiId;
+        if (id) ids.push(id);
+    });
+    return ids;
+}
+
+function oeffneMultiSheet() {
+    let ids = holeMarkierteIds();
+    if (ids.length < 2) return;
+    document.getElementById("multiSheetAnzahl").innerText = `${ids.length} Kombis ausgewählt`;
+    document.getElementById("multiAktionsSheet").classList.add("open");
+}
+
+function schliesseMultiSheet() {
+    document.getElementById("multiAktionsSheet").classList.remove("open");
+}
+
+function multiAlleLoeschen() {
+    let ids = holeMarkierteIds();
+    schliesseMultiSheet();
+    alleGespeichertenKombis = alleGespeichertenKombis.filter(k => !ids.includes(String(k.id)));
+    saveSafeToLocalStorage();
+    baueTresorUndFilterAuf();
+    aktualisiereMultiAktionsButton();
+    haptic.error();
+    zeigeToast(`🗑️ ${ids.length} Kombis gelöscht`);
+}
+
+function multiAlleFavorit() {
+    let ids = holeMarkierteIds();
+    let alleFav = ids.every(id => {
+        let k = alleGespeichertenKombis.find(k => String(k.id) === String(id));
+        return k && k.isFav;
+    });
+    ids.forEach(id => {
+        let k = alleGespeichertenKombis.find(k => String(k.id) === String(id));
+        if (k) k.isFav = !alleFav;
+    });
+    saveSafeToLocalStorage();
+    baueTresorUndFilterAuf();
+    schliesseMultiSheet();
+    aktualisiereMultiAktionsButton();
+    haptic.medium();
+    zeigeToast(alleFav ? "⭐ Favoriten entfernt" : "⭐ Als Favoriten markiert");
+}
+
+function toggleKombiHighlight(event, element) {
+    if (event.target.closest('.action-btns')) return;
+    if (isLongPressTriggered) return;
+    element.classList.toggle('highlighted-vault-item');
+    aktualisiereMultiAktionsButton();
+}
+
+function multiAlleKopieren() {
+    let ids = holeMarkierteIds();
+
+    // Kategorien prüfen
+    let kategorien = new Set(ids.map(id => {
+        let k = alleGespeichertenKombis.find(k => String(k.id) === String(id));
+        return k ? k.kategorie : null;
+    }).filter(Boolean));
+
+    if (kategorien.size > 1) {
+        zeigeToast("⚠️ Nur Kombis der gleichen Kategorie können zusammen kopiert werden");
+        haptic.error();
+        return;
+    }
+
+    let kategorie = [...kategorien][0];
+    let texte = ids.map((id, idx) => {
+        let k = alleGespeichertenKombis.find(k => String(k.id) === String(id));
+        return k ? `${idx + 1}. ${k.text}` : null;
+    }).filter(Boolean);
+
+    let kopierText = `[${kategorie}]\n` + texte.join("\n");
+
+    let temp = document.createElement("textarea");
+    temp.value = kopierText;
+    temp.style.cssText = "position:fixed;top:0;left:0;";
+    document.body.appendChild(temp);
+    temp.focus(); temp.select();
+    try { document.execCommand("copy"); }
+    catch { navigator.clipboard.writeText(kopierText); }
+    document.body.removeChild(temp);
+
+    schliesseMultiSheet();
+    haptic.medium();
+    zeigeToast(`📋 ${ids.length} Kombis kopiert`);
+}
+
+function multiAuswahlAufheben() {
+    document.querySelectorAll('.highlighted-vault-item').forEach(el => {
+        el.classList.remove('highlighted-vault-item');
+    });
+    aktualisiereMultiAktionsButton();
+    schliesseMultiSheet();
 }
 
 function baueTresorUndFilterAuf() {
@@ -876,6 +1061,7 @@ function baueTresorUndFilterAuf() {
 
         liste.innerHTML += `
             <li class="kombi-item ${favKlasse}"
+                data-kombi-id="${String(k.id)}"
                 onmousedown="handleTouchStart(${k.id})"
                 onmouseup="handleTouchEnd(event, this)"
                 ontouchstart="handleTouchStart(${k.id})"
