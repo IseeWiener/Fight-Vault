@@ -7,24 +7,6 @@ let gewaehlteErstellungsKategorie = 'Alle';
 let vollerKategorieNameMitEmoji = '';
 let aktiveKategorien = new Set();
 
-// ── Haptic Feedback ───────────────────────────────────────────────────────────
-const haptic = {
-    // Kurzes Tippen – normale Buttons, Modus wechseln
-    light:   () => navigator.vibrate && navigator.vibrate(30),
-    // Mittleres Feedback – Technik hinzufügen, Auswahl
-    medium:  () => navigator.vibrate && navigator.vibrate(50),
-    // Stärker – Speichern, Roulette-Ergebnis
-    heavy:   () => navigator.vibrate && navigator.vibrate(80),
-    // Doppel-Tap – Tab wechseln
-    double:  () => navigator.vibrate && navigator.vibrate([40, 60, 40]),
-    // Fehler – kurz-kurz-kurz
-    error:   () => navigator.vibrate && navigator.vibrate([80, 50, 80]),
-    // Erfolg – kurz dann lang
-    success: () => navigator.vibrate && navigator.vibrate([30, 60, 80]),
-    // Glocke – beim Timer
-    bell:    () => navigator.vibrate && navigator.vibrate([60, 80, 60, 80, 120]),
-};
-
 // Timer
 let timerInterval = null;
 let timerSekunden = 180;
@@ -240,7 +222,6 @@ function switchTab(tabId, button) {
 
     aktualisiereTrainingMetaStatusTexte();
     window.scrollTo({ top: 0, behavior: 'instant' });
-    haptic.double();
 }
 
 function switchTrainingMode(modeId, button) {
@@ -258,7 +239,6 @@ function switchTrainingMode(modeId, button) {
 
     stoppeSämtlicheTrainingsAktionen();
     window.scrollTo({ top: 0, behavior: 'instant' });
-    haptic.light();
 }
 
 // ── Technik-Eingabe ───────────────────────────────────────────────────────────
@@ -520,14 +500,12 @@ function saubereEingabeFormatierung(str) {
 
 function fuegeTechnikHinzu(technikName) {
     aktuelleKombi.push(technikName);
-    haptic.medium();
     renderVorschau();
 }
 
 function loescheLetzteTechnik() {
     if (aktuelleKombi.length > 0) {
         aktuelleKombi.pop();
-        haptic.light();
         renderVorschau();
     }
 }
@@ -617,7 +595,7 @@ function finaleSpeicherung(kategorieName) {
     let existiertBereits = alleGespeichertenKombis.some(k => k.text === neuerKombiText);
 
     if (existiertBereits) {
-        haptic.error();
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
         alert(`❌ Kombi abgelehnt:\n"${neuerKombiText}" liegt schon in deinem Tresor!`);
         aktuelleKombi = [];
         renderVorschau();
@@ -632,7 +610,6 @@ function finaleSpeicherung(kategorieName) {
         isFav: false
     });
 
-    haptic.success();
     saveSafeToLocalStorage();
     aktuelleKombi = [];
     renderVorschau();
@@ -670,7 +647,6 @@ function loescheKombi(id) {
 
 function loeschBestaetigen() {
     if (!zuLoeschendId) return;
-    haptic.error();
     alleGespeichertenKombis = alleGespeichertenKombis.filter(k => k.id !== zuLoeschendId);
     zuLoeschendId = null;
     saveSafeToLocalStorage();
@@ -761,7 +737,7 @@ function ausfuehrenKopiertEffekt(button) {
     let alterInhalt = button.innerHTML;
     button.innerHTML = "📋 Kopiert!";
     button.classList.add("copied-status");
-    haptic.light();
+    if ('vibrate' in navigator) navigator.vibrate(40);
     setTimeout(() => {
         button.innerHTML = alterInhalt;
         button.classList.remove("copied-status");
@@ -793,9 +769,9 @@ function toggleFavorit(id) {
     let kombi = alleGespeichertenKombis.find(k => k.id === id);
     if (kombi) {
         kombi.isFav = !kombi.isFav;
-        haptic.medium();
         saveSafeToLocalStorage();
         baueTresorUndFilterAuf();
+        if ('vibrate' in navigator) navigator.vibrate(50);
     }
 }
 
@@ -972,7 +948,6 @@ function startGambleRoulette(mitAudio = false) {
 
             let finaleKombi = pool[Math.floor(Math.random() * pool.length)];
             display.innerText = finaleKombi.text;
-            haptic.heavy();
 
             if (mitAudio) {
                 baueAudioSatzStruktur(finaleKombi.text);
@@ -1282,7 +1257,7 @@ function zeigeToast(nachricht) {
     toast.classList.add("show");
     if (toastTimeout) clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
-    haptic.error();
+    if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
 }
 
 // ── Drum Roller ───────────────────────────────────────────────────────────────
@@ -1437,7 +1412,6 @@ function toggleTimer() {
         stoppeTimer();
     } else {
         spieleBoxglocke(1); // 1x Glocke beim Start
-        haptic.bell();
         timerLaeuft = true;
         btn.innerText        = "Pause";
         btn.style.background = "linear-gradient(90deg, #ffcc00 0%, #d4aa00 100%)";
@@ -1477,7 +1451,6 @@ function handleTimerWechsel() {
     if (istArbeitszeit) {
         istArbeitszeit = false;
         spieleBoxglocke(3);
-        haptic.bell();
 
         if (maxRundenVorgabe > 0 && aktuelleRunde >= maxRundenVorgabe) {
             stoppeTimer();
@@ -1504,7 +1477,7 @@ function handleTimerWechsel() {
         istArbeitszeit = true;
         aktuelleRunde++;
         spieleBoxglocke(1);
-        haptic.double();
+        timerSekunden = 180;
         document.getElementById("timerStatus").innerText   = "WORK 🥊";
         document.getElementById("timerStatus").style.color = "var(--orange)";
         // Trainer wieder starten falls vorher aktiv
@@ -1531,7 +1504,7 @@ function renderTimerDisplay() {
     if (kreis) {
         let maxSek = istArbeitszeit ? 180 : 60;
         let progress = timerSekunden / maxSek;
-        let umfang = 2 * Math.PI * 72; // r=72
+        let umfang = 2 * Math.PI * 80; // r=80
         kreis.style.strokeDashoffset = umfang * (1 - progress);
         kreis.className = "timer-circle-progress" +
             (!istArbeitszeit ? " pause-mode" : "");
