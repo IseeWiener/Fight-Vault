@@ -19,75 +19,62 @@
 </head>
 <body>
 
-    <!-- ── Header ───────────────────────────────────────────── -->
-    <header class="app-header">
-        <div class="app-header-logo">FIGHT<span>VAULT</span></div>
-        <div class="app-header-subtitle">Dein Kampfsport-Kombi-Tresor</div>
-    </header>
+    <!-- ── TAB: SAFE & TRESOR ─────────────────────────────── -->
+    <div id="safe-tab" class="tab-content active">
 
-    <!-- ── Haupt-Inhalt ─────────────────────────────────────── -->
-    <main class="main-content">
-
-        <!-- ── TAB: SAFE & TRESOR ─────────────────────────────── -->
-        <div id="safe-tab" class="tab-content active">
-
-            <!-- Kombination erstellen -->
-            <div class="section-header">
-                <div class="section-title">Kombination</div>
-                <div class="section-line"></div>
-            </div>
-
-            <div class="card">
-                <span class="filter-label">Kategorie filtern</span>
-                <div class="filter-leiste" style="margin-bottom: 14px;">
-                    <button id="btn-create-Alle" class="btn-filter btn-create-filter active"
-                            onclick="filterEingabeTechniken('Alle', this, 'Alle')">Alle</button>
-                    <div class="category-dropdown-container">
-                        <button class="btn-dropdown-toggle" onclick="toggleDropdown(event)">📂 Kategorie</button>
-                        <div id="categoryDropdown" class="dropdown-menu">
-                            <div class="dropdown-item" onclick="selectFromDropdown('Boxen', '🥊')">🥊 Boxen</div>
-                            <div class="dropdown-item" onclick="selectFromDropdown('Kick-/Thaiboxen', '🔥')">🔥 Kick-/Thaiboxen</div>
-                            <div class="dropdown-item" onclick="selectFromDropdown('MMA', '🥊🤼')">🥊🤼 MMA</div>
-                            <div class="dropdown-item" onclick="selectFromDropdown('Ringen/Grappling', '🤼')">🤼 Ringen/Grappling</div>
-                            <div class="dropdown-item" onclick="selectFromDropdown('Karate/TKD', '🥋')">🥋 Karate/TKD</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="input-zeile">
-                    <div class="custom-autocomplete" style="flex:1;">
-                        <input type="text" id="kombiInput"
-                               placeholder="Antippen für Liste & Tastatur..."
-                               oninput="checkInput()" onkeypress="checkEnter(event)"
-                               onblur="setTimeout(() => { tastaturOffen = false; let i = document.getElementById('kombiInput'); if(i) i.setAttribute('readonly', true); }, 150)"
-                               autocomplete="off" readonly>
-                    </div>
-                    <button id="diceBtn" class="btn-dice" onclick="generiereZufaelligeKombi()" title="Zufällige Kombination">🎲</button>
-                </div>
-                <div id="vorschlagsListe" class="vorschlags-dropdown"></div>
-
-                <div id="kombiVorschau" class="vorschau-bereich"
-                     onclick="loescheLetzteTechnik()" title="Tippen um letzte Technik zu löschen">
-                    <i>Noch keine Technik hinzugefügt...</i>
-                </div>
-                <div id="infoText" class="info-text">Mindestens 2 Techniken hinzufügen</div>
-                <button id="saveBtn" class="btn-primary" onclick="oeffneSpeicherDialog()" disabled>Im Safe ablegen</button>
-            </div>
-
-            <!-- Tresor -->
-            <div class="section-header" style="margin-top: 8px;">
-                <div class="section-title">Tresor</div>
-                <div class="section-line"></div>
-            </div>
-
-            <div class="card">
-                <span class="filter-label">Gedrückt halten für Favoriten ⭐</span>
-                <div class="filter-leiste" id="filterLeisteContainer">
-                    <button id="filter-Alle" class="btn-filter active" onclick="filterTresor('Alle')">Alle</button>
-                </div>
-                <ul id="tresorListe" class="kombi-liste"></ul>
-            </div>
+        <!-- Header -->
+        <div class="app-header">
+            <span class="app-header-icon">🥊</span>
+            <span class="app-header-logo">Fight<span>Vault</span></span>
+            <span class="app-header-tag">Kombi-Tresor</span>
         </div>
+
+        <!-- Kombination erstellen -->
+        <div class="card">
+            <span class="card-label">Kombination erstellen</span>
+            <div class="filter-leiste">
+                <button id="btn-create-Alle" class="btn-filter btn-create-filter active"
+                        onclick="filterEingabeTechniken('Alle', this, 'Alle')">Alle</button>
+                <div class="category-dropdown-container">
+                    <button class="btn-dropdown-toggle" onclick="toggleDropdown(event)">📂 Kategorie</button>
+                    <div id="categoryDropdown" class="dropdown-menu">
+                        <div class="dropdown-item" onclick="selectFromDropdown('Boxen', '🥊')">🥊 Boxen</div>
+                        <div class="dropdown-item" onclick="selectFromDropdown('Kick-/Thaiboxen', '🔥')">🔥 Kick-/Thaiboxen</div>
+                        <div class="dropdown-item" onclick="selectFromDropdown('MMA', '🥊🤼')">🥊🤼 MMA</div>
+                        <div class="dropdown-item" onclick="selectFromDropdown('Ringen/Grappling', '🤼')">🤼 Ringen/Grappling</div>
+                        <div class="dropdown-item" onclick="selectFromDropdown('Karate/TKD', '🥋')">🥋 Karate/TKD</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-zeile">
+                <div class="custom-autocomplete" style="flex:1;">
+                    <input type="text" id="kombiInput"
+                           placeholder="Antippen für Liste & Tastatur..."
+                           oninput="checkInput()" onkeypress="checkEnter(event)"
+                           onblur="setTimeout(() => { tastaturOffen = false; let i = document.getElementById('kombiInput'); if(i) i.setAttribute('readonly', true); }, 150)"
+                           autocomplete="off" readonly>
+                </div>
+                <button id="diceBtn" class="btn-dice" onclick="generiereZufaelligeKombi()">🎲</button>
+            </div>
+            <div id="vorschlagsListe" class="vorschlags-dropdown"></div>
+
+            <div id="kombiVorschau" class="vorschau-bereich" onclick="loescheLetzteTechnik()">
+                <i>Noch keine Technik hinzugefügt...</i>
+            </div>
+            <div id="infoText" class="info-text">Mindestens 2 Techniken hinzufügen</div>
+            <button id="saveBtn" class="btn-primary" onclick="oeffneSpeicherDialog()" disabled>Im Safe ablegen</button>
+        </div>
+
+        <!-- Tresor -->
+        <div class="card">
+            <span class="card-label">Mein Tresor &nbsp;·&nbsp; <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-dim);">Gedrückt halten für ⭐</span></span>
+            <div class="filter-leiste" id="filterLeisteContainer">
+                <button id="filter-Alle" class="btn-filter active" onclick="filterTresor('Alle')">Alle</button>
+            </div>
+            <ul id="tresorListe" class="kombi-liste"></ul>
+        </div>
+    </div>
 
         <!-- ── TAB: TRAINING ──────────────────────────────────── -->
         <div id="training-tab" class="tab-content">
@@ -193,9 +180,9 @@
             <div class="workout-box">
                 <div class="timer-circle-container">
                     <div class="timer-circle">
-                        <svg width="180" height="180" viewBox="0 0 180 180">
-                            <circle class="timer-circle-bg" cx="90" cy="90" r="80"/>
-                            <circle id="timerCircleProgress" class="timer-circle-progress" cx="90" cy="90" r="80"/>
+                        <svg width="160" height="160" viewBox="0 0 160 160">
+                            <circle class="timer-circle-bg" cx="80" cy="80" r="72"/>
+                            <circle id="timerCircleProgress" class="timer-circle-progress" cx="80" cy="80" r="72"/>
                         </svg>
                         <div class="timer-inner">
                             <div id="timerDisplay" class="timer-display">03:00</div>
@@ -226,13 +213,31 @@
                     </div>
                 </div>
 
+                <div class="option-row" style="justify-content:center; gap:0; padding: 12px 0;">
+                    <div class="time-picker-group">
+                        <span class="time-picker-label">Arbeitszeit</span>
+                        <div class="time-picker-controls">
+                            <button class="time-picker-btn" onclick="aendereArbeitszeit(-1)">−</button>
+                            <span id="arbeitszeitAnzeige" class="time-picker-value">3:00</span>
+                            <button class="time-picker-btn" onclick="aendereArbeitszeit(1)">+</button>
+                        </div>
+                    </div>
+                    <div class="time-picker-divider"></div>
+                    <div class="time-picker-group">
+                        <span class="time-picker-label">Pause</span>
+                        <div class="time-picker-controls">
+                            <span id="pauseAnzeige" class="time-picker-value" style="color:var(--text-mid);">1:00</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="timer-controls">
                     <button id="timerStartBtn" class="btn-primary" style="margin:0;" onclick="toggleTimer()">Start</button>
                     <button class="btn-sec" onclick="resetTimer()">Reset</button>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <!-- ── Bottom Navigation ─────────────────────────────────── -->
     <nav class="bottom-nav">
