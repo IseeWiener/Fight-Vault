@@ -3,266 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FightVault - Mein Kombi-Safe</title>
-
+    <title>FightVault</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#09090b">
+    <meta name="theme-color" content="#080809">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <link rel="stylesheet" href="style.css">
-
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker registriert!', reg))
-                    .catch(err => console.log('Service Worker Fehler:', err));
+                navigator.serviceWorker.register('sw.js');
             });
         }
     </script>
 </head>
 <body>
 
-    <h1>🥊 FightVault</h1>
-    <div class="subtitle">Dein persönlicher Kampfsport-Kombi-Tresor</div>
+    <!-- ── Header ───────────────────────────────────────────── -->
+    <header class="app-header">
+        <div class="app-header-logo">FIGHT<span>VAULT</span></div>
+        <div class="app-header-subtitle">Dein Kampfsport-Kombi-Tresor</div>
+    </header>
 
-    <!-- ── Navigation ─────────────────────────────────────────── -->
-    <div class="nav-container">
-        <div class="nav-zeile">
-            <div class="nav-tabs">
-                <button id="navBtnSafe"     class="nav-btn active" onclick="switchTab('safe-tab', this)">🔒 Safe & Tresor</button>
-                <button id="navBtnTraining" class="nav-btn"        onclick="switchTab('training-tab', this)">⚡ Training</button>
+    <!-- ── Haupt-Inhalt ─────────────────────────────────────── -->
+    <main class="main-content">
+
+        <!-- ── TAB: SAFE & TRESOR ─────────────────────────────── -->
+        <div id="safe-tab" class="tab-content active">
+
+            <!-- Kombination erstellen -->
+            <div class="section-header">
+                <div class="section-title">Kombination</div>
+                <div class="section-line"></div>
             </div>
 
-            <div id="trainingFilterWrapper" class="training-filter-container">
-                <button id="trainingFilterToggle" class="btn-training-filter-toggle" onclick="toggleTrainingFilterDropdown(event)">🔍 Alle</button>
-                <div id="trainingFilterDropdown" class="dropdown-menu">
-                    <div class="dropdown-item" onclick="waehleTrainingFilter('Alle')">🌍 Alle Kombis</div>
-                    <div class="dropdown-item" onclick="waehleTrainingFilter('🥊 Boxen')">🥊 Boxen</div>
-                    <div class="dropdown-item" onclick="waehleTrainingFilter('🔥 Kick-/Thaiboxen')">🔥 Kick-/Thaiboxen</div>
-                    <div class="dropdown-item" onclick="waehleTrainingFilter('🥊🤼 MMA')">🥊🤼 MMA</div>
-                    <div class="dropdown-item" onclick="waehleTrainingFilter('🤼 Ringen/Grappling')">🤼 Ringen/Grappling</div>
-                    <div class="dropdown-item" onclick="waehleTrainingFilter('🥋 Karate/TKD')">🥋 Karate/TKD</div>
+            <div class="card">
+                <span class="filter-label">Kategorie filtern</span>
+                <div class="filter-leiste" style="margin-bottom: 14px;">
+                    <button id="btn-create-Alle" class="btn-filter btn-create-filter active"
+                            onclick="filterEingabeTechniken('Alle', this, 'Alle')">Alle</button>
+                    <div class="category-dropdown-container">
+                        <button class="btn-dropdown-toggle" onclick="toggleDropdown(event)">📂 Kategorie</button>
+                        <div id="categoryDropdown" class="dropdown-menu">
+                            <div class="dropdown-item" onclick="selectFromDropdown('Boxen', '🥊')">🥊 Boxen</div>
+                            <div class="dropdown-item" onclick="selectFromDropdown('Kick-/Thaiboxen', '🔥')">🔥 Kick-/Thaiboxen</div>
+                            <div class="dropdown-item" onclick="selectFromDropdown('MMA', '🥊🤼')">🥊🤼 MMA</div>
+                            <div class="dropdown-item" onclick="selectFromDropdown('Ringen/Grappling', '🤼')">🤼 Ringen/Grappling</div>
+                            <div class="dropdown-item" onclick="selectFromDropdown('Karate/TKD', '🥋')">🥋 Karate/TKD</div>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="input-zeile">
+                    <div class="custom-autocomplete" style="flex:1;">
+                        <input type="text" id="kombiInput"
+                               placeholder="Antippen für Liste & Tastatur..."
+                               oninput="checkInput()" onkeypress="checkEnter(event)"
+                               onblur="setTimeout(() => { tastaturOffen = false; let i = document.getElementById('kombiInput'); if(i) i.setAttribute('readonly', true); }, 150)"
+                               autocomplete="off" readonly>
+                    </div>
+                    <button id="diceBtn" class="btn-dice" onclick="generiereZufaelligeKombi()" title="Zufällige Kombination">🎲</button>
+                </div>
+                <div id="vorschlagsListe" class="vorschlags-dropdown"></div>
+
+                <div id="kombiVorschau" class="vorschau-bereich"
+                     onclick="loescheLetzteTechnik()" title="Tippen um letzte Technik zu löschen">
+                    <i>Noch keine Technik hinzugefügt...</i>
+                </div>
+                <div id="infoText" class="info-text">Mindestens 2 Techniken hinzufügen</div>
+                <button id="saveBtn" class="btn-primary" onclick="oeffneSpeicherDialog()" disabled>Im Safe ablegen</button>
+            </div>
+
+            <!-- Tresor -->
+            <div class="section-header" style="margin-top: 8px;">
+                <div class="section-title">Tresor</div>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="card">
+                <span class="filter-label">Gedrückt halten für Favoriten ⭐</span>
+                <div class="filter-leiste" id="filterLeisteContainer">
+                    <button id="filter-Alle" class="btn-filter active" onclick="filterTresor('Alle')">Alle</button>
+                </div>
+                <ul id="tresorListe" class="kombi-liste"></ul>
             </div>
         </div>
-    </div>
 
-    <div id="trainingSubNav" class="sub-nav">
-        <button id="subBtnStandard" class="sub-btn active" onclick="switchTrainingMode('standard-mode', this)">🎯 Standard</button>
-        <button id="subBtnAudio"    class="sub-btn"        onclick="switchTrainingMode('audio-mode', this)">🗣️ Audio-Coach</button>
-        <button id="subBtnChaos"    class="sub-btn"        onclick="switchTrainingMode('chaos-mode', this)">🔥 Chaos-Trainer</button>
-    </div>
+        <!-- ── TAB: TRAINING ──────────────────────────────────── -->
+        <div id="training-tab" class="tab-content">
 
-    <!-- ══════════════════════════════════════════════════════════
-         TAB: SAFE & TRESOR
-    ══════════════════════════════════════════════════════════ -->
-    <div id="safe-tab" class="tab-content active">
+            <div id="trainingSubNav" class="sub-nav">
+                <button id="subBtnStandard" class="sub-btn active" onclick="switchTrainingMode('standard-mode', this)">🎯 Roulette</button>
+                <button id="subBtnAudio"    class="sub-btn"        onclick="switchTrainingMode('audio-mode', this)">🗣️ Audio</button>
+                <button id="subBtnChaos"    class="sub-btn"        onclick="switchTrainingMode('chaos-mode', this)">🔥 Chaos</button>
+            </div>
 
-        <!-- Kombination erstellen -->
-        <div class="box">
-            <h3>Kombination zusammenstellen</h3>
+            <!-- Standard Roulette -->
+            <div id="standard-mode" class="mode-content active">
+                <div class="workout-box">
+                    <div class="workout-title">🎯 Kombi-Roulette</div>
+                    <div id="rouletteFilterStatus" class="roulette-meta">Alle Kombinationen</div>
+                    <div id="rouletteContainer" class="roulette-container">
+                        <div id="rouletteDisplay" class="roulette-text"
+                             style="color:var(--text-dim); font-style:italic; font-weight:400; font-size:1rem;">Keine Kombi geladen</div>
+                    </div>
+                    <button id="standardDrawBtn" class="btn-primary" onclick="startGambleRoulette(false)">Kombi ziehen</button>
+                </div>
+            </div>
 
-            <span class="filter-label">Technik-Auswahl filtern nach:</span>
-            <div class="filter-leiste" style="margin-bottom: 12px;">
-                <button id="btn-create-Alle" class="btn-filter btn-create-filter active"
-                        onclick="filterEingabeTechniken('Alle', this, 'Alle')">Alle</button>
+            <!-- Audio Coach -->
+            <div id="audio-mode" class="mode-content">
+                <div class="workout-box">
+                    <div class="workout-title" style="color:var(--orange);">🗣️ Audio-Coach</div>
+                    <div id="audioFilterStatus" class="roulette-meta">Zieh eine Kombi – sie wird laut vorgelesen!</div>
+                    <div id="audioRouletteContainer" class="roulette-container">
+                        <div id="audioRouletteDisplay" class="roulette-text"
+                             style="color:var(--text-dim); font-style:italic; font-weight:400; font-size:1rem;">Bereit für Sprachausgabe</div>
+                    </div>
 
-                <div class="category-dropdown-container">
-                    <button class="btn-dropdown-toggle" onclick="toggleDropdown(event)">📂 Kategorie wählen</button>
-                    <div id="categoryDropdown" class="dropdown-menu">
-                        <div class="dropdown-item" onclick="selectFromDropdown('Boxen', '🥊')">🥊 Boxen</div>
-                        <div class="dropdown-item" onclick="selectFromDropdown('Kick-/Thaiboxen', '🔥')">🔥 Kick-/Thaiboxen</div>
-                        <div class="dropdown-item" onclick="selectFromDropdown('MMA', '🥊🤼')">🥊🤼 MMA</div>
-                        <div class="dropdown-item" onclick="selectFromDropdown('Ringen/Grappling', '🤼')">🤼 Ringen/Grappling</div>
-                        <div class="dropdown-item" onclick="selectFromDropdown('Karate/TKD', '🥋')">🥋 Karate/TKD</div>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <button id="audioDrawBtn" class="btn-primary" style="flex:2; margin-top:0;" onclick="startGambleRoulette(true)">Kombi ziehen & Vorlesen</button>
+                        <button id="audioLoopBtn" class="btn-sec" style="flex:1;" onclick="toggleAudioLoop()">Loop Start</button>
+                    </div>
+
+                    <!-- Einstellungen ausklappbar -->
+                    <button class="audio-settings-toggle" id="audioSettingsToggle" onclick="toggleAudioSettings()">
+                        ✨ Extras
+                        <span id="audioSettingsArrow" style="margin-left:auto; transition: transform 0.2s;">▼</span>
+                    </button>
+
+                    <div id="audioSettingsPanel" class="audio-settings-panel">
+                        <div class="option-row">
+                            <label>Geschwindigkeit</label>
+                            <button id="speedToggleBtn" class="btn-speed active" onclick="wechsleGeschwindigkeit()">▶️ 1x</button>
+                        </div>
+
+                        <div class="option-row">
+                            <label for="audioIntervallSlider">Intervall</label>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="range" id="audioIntervallSlider" min="5" max="20" step="1" value="10"
+                                       oninput="liveUpdateAudioSlider(this.value)">
+                                <span id="intervallWert" style="color:var(--orange); font-weight:700; display:inline-block; width:35px; text-align:right;">5s</span>
+                            </div>
+                        </div>
+
+                        <div class="option-row" style="margin-bottom:0;">
+                            <label for="audioMixerCheckbox">
+                                <input type="checkbox" id="audioMixerCheckbox">
+                                <span>Mixer 🎲</span>
+                            </label>
+                            <span style="font-size:0.7rem; color:var(--text-dim); max-width:160px; text-align:right; line-height:1.4;">
+                                Wechselt nach jeder Ansage die Kombi
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="input-zeile">
-                <div class="custom-autocomplete" style="flex:1; position:relative;">
-                    <input type="text" id="kombiInput"
-                           placeholder="Technik wählen, tippen oder Kombi einfügen..."
-                           oninput="checkInput()" onkeypress="checkEnter(event)"
-                           onfocus="zeigeVorschlaege()"
-                           onblur="setTimeout(() => document.getElementById('vorschlagsListe').classList.remove('open'), 150)"
-                           autocomplete="off" autofocus>
-                    <div id="vorschlagsListe" class="vorschlags-dropdown"></div>
+            <!-- Chaos Trainer -->
+            <div id="chaos-mode" class="mode-content">
+                <div class="workout-box card-accent-red">
+                    <div class="workout-title" style="color:var(--red);">🔥 Chaos-Reaktionstrainer</div>
+                    <div id="chaosFilterStatus" class="roulette-meta">Zufällige Einzel-Kommandos</div>
+                    <div id="chaosContainer" class="roulette-container" style="border-color:rgba(255,51,51,0.2);">
+                        <div id="chaosDisplay" class="chaos-display-text">OFFLINE</div>
+                    </div>
+
+                    <div class="option-row">
+                        <label for="chaosSpeedSlider">Tempo</label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="range" id="chaosSpeedSlider" min="15" max="40" value="25"
+                                   oninput="liveUpdateChaosSlider(this.value)" style="accent-color:var(--red);">
+                            <span id="chaosWert" style="color:var(--red); font-weight:700; display:inline-block; width:35px; text-align:right;">2.5s</span>
+                        </div>
+                    </div>
+
+                    <button id="chaosStartBtn" class="btn-primary"
+                            style="background:linear-gradient(135deg, #ff3333 0%, #b30000 100%);"
+                            onclick="toggleChaosTrainer()">Trainer einschalten</button>
                 </div>
-                <button id="diceBtn" class="btn-dice" onclick="generiereZufaelligeKombi()" title="Zufällige sinnvolle Kombination würfeln">🎲</button>
             </div>
 
-            <div id="kombiVorschau" class="vorschau-bereich"
-                 onclick="loescheLetzteTechnik()" title="Klicken, um die letzte Technik zu löschen">
-                <i>Noch keine Technik hinzugefügt...</i>
+            <!-- Timer -->
+            <div class="section-header">
+                <div class="section-title">Timer</div>
+                <div class="section-line"></div>
             </div>
-            <div id="infoText" class="info-text">Füge mindestens 2 Techniken hinzu</div>
-            <button id="saveBtn" class="btn-primary" onclick="oeffneSpeicherDialog()" disabled>Im Safe ablegen</button>
-        </div>
 
-        <!-- Tresor-Ansicht -->
-        <div class="box">
-            <h3>Mein Tresor</h3>
-            <span class="filter-label" style="margin-bottom:2px;">
-                Tippe kurz zum Markieren | Für Favoriten <b>gedrückt halten</b> ⭐
-            </span>
-            <div class="filter-leiste" id="filterLeisteContainer">
-                <button id="filter-Alle" class="btn-filter active" onclick="filterTresor('Alle')">Alle</button>
-            </div>
-            <ul id="tresorListe" class="kombi-liste"></ul>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════════
-         TAB: TRAINING
-    ══════════════════════════════════════════════════════════ -->
-    <div id="training-tab" class="tab-content">
-
-        <!-- Standard-Roulette -->
-        <div id="standard-mode" class="mode-content active">
             <div class="workout-box">
-                <h3 style="color:#555; border-color:#141417;">🎯 Kombi-Roulette</h3>
-                <div id="rouletteFilterStatus" class="roulette-meta">Aktueller Modus: Alle Kombinationen</div>
-                <div id="rouletteContainer" class="roulette-container">
-                    <div id="rouletteDisplay" class="roulette-text"
-                         style="color:#666; font-style:italic; font-weight:normal; font-size:1.1rem;">Keine Kombi geladen</div>
-                </div>
-                <button id="standardDrawBtn" class="btn-primary" onclick="startGambleRoulette(false)">Kombi ziehen</button>
-            </div>
-        </div>
-
-        <!-- Audio-Coach -->
-        <div id="audio-mode" class="mode-content">
-            <div class="workout-box">
-                <h3 style="color:#ff5500; border-color:#1a1a1f;">🗣️ Audio-Coach Roulette</h3>
-                <div id="audioFilterStatus" class="roulette-meta">Zieh eine Kombi – sie wird dir laut vorgelesen!</div>
-                <div id="audioRouletteContainer" class="roulette-container">
-                    <div id="audioRouletteDisplay" class="roulette-text"
-                         style="color:#666; font-style:italic; font-weight:normal; font-size:1.1rem;">Bereit für Sprachausgabe</div>
+                <div class="timer-circle-container">
+                    <div class="timer-circle">
+                        <svg width="180" height="180" viewBox="0 0 180 180">
+                            <circle class="timer-circle-bg" cx="90" cy="90" r="80"/>
+                            <circle id="timerCircleProgress" class="timer-circle-progress" cx="90" cy="90" r="80"/>
+                        </svg>
+                        <div class="timer-inner">
+                            <div id="timerDisplay" class="timer-display">03:00</div>
+                            <div id="timerStatus" class="timer-status">BEREIT</div>
+                        </div>
+                    </div>
+                    <div id="roundCounterDisplay" class="timer-round-counter">Endlos-Training</div>
                 </div>
 
-                <div class="option-row">
-                    <label>Sprech-Geschwindigkeit:</label>
-                    <button id="speedToggleBtn" class="btn-speed active" onclick="wechsleGeschwindigkeit()">▶️ 1x</button>
-                </div>
-
-                <div class="option-row">
-                    <label for="audioIntervallSlider">Ansage wiederholen alle:</label>
-                    <div>
-                        <input type="range" id="audioIntervallSlider" min="5" max="20" step="1" value="20"
-                               oninput="liveUpdateAudioSlider(this.value)">
-                        <span id="intervallWert" style="color:#ff5500; font-weight:bold; margin-left:5px; display:inline-block; width:35px; text-align:right;">10s</span>
+                <div class="option-row" style="flex-direction:column; align-items:center; gap:10px; text-align:center;">
+                    <label style="color:var(--text-mid);">Anzahl Runden</label>
+                    <div class="drum-roller-container">
+                        <div class="drum-roller-highlight"></div>
+                        <div id="drumRoller" class="drum-roller">
+                            <div class="drum-item" data-index="0">♾️</div>
+                            <div class="drum-item" data-index="1">1</div>
+                            <div class="drum-item" data-index="2">2</div>
+                            <div class="drum-item" data-index="3">3</div>
+                            <div class="drum-item" data-index="4">4</div>
+                            <div class="drum-item" data-index="5">5</div>
+                            <div class="drum-item" data-index="6">6</div>
+                            <div class="drum-item" data-index="7">8</div>
+                            <div class="drum-item" data-index="8">10</div>
+                            <div class="drum-item" data-index="9">12</div>
+                        </div>
+                        <div class="drum-roller-fade-top"></div>
+                        <div class="drum-roller-fade-bottom"></div>
                     </div>
                 </div>
 
-                <div class="option-row">
-                    <label for="audioMixerCheckbox">
-                        <input type="checkbox" id="audioMixerCheckbox">
-                        <span>Zufälliges Workout (Mixer) 🎲</span>
-                    </label>
-                    <span style="font-size:11px; color:#555; max-width:180px; text-align:right;">
-                        Wechselt im Loop nach jeder Ansage die Kombi
-                    </span>
-                </div>
-
-                <div style="display:flex; gap:10px;">
-                    <button id="audioDrawBtn"  class="btn-primary" style="flex:2;" onclick="startGambleRoulette(true)">Kombi ziehen & Vorlesen</button>
-                    <button id="audioLoopBtn"  class="btn-sec"     style="flex:1;" onclick="toggleAudioLoop()">Loop Start</button>
+                <div class="timer-controls">
+                    <button id="timerStartBtn" class="btn-primary" style="margin:0;" onclick="toggleTimer()">Start</button>
+                    <button class="btn-sec" onclick="resetTimer()">Reset</button>
                 </div>
             </div>
         </div>
+    </main>
 
-        <!-- Chaos-Trainer -->
-        <div id="chaos-mode" class="mode-content">
-            <div class="workout-box">
-                <h3 style="color:#ff3333; border-color:#1a1a1f;">🔥 Chaos-Reaktionstrainer</h3>
-                <div id="chaosFilterStatus" class="roulette-meta">Der Trainer ruft dir zufällige Einzel-Kommandos zu!</div>
-                <div id="chaosContainer" class="roulette-container" style="border-color: rgba(255,51,51,0.2);">
-                    <div id="chaosDisplay" class="roulette-text" style="color:#ff3333; font-size:1.6rem;">OFFLINE</div>
-                </div>
-
-                <div class="option-row">
-                    <label for="chaosSpeedSlider">Tempo (Kommandos alle):</label>
-                    <div>
-                        <input type="range" id="chaosSpeedSlider" min="15" max="40" value="25"
-                               oninput="liveUpdateChaosSlider(this.value)">
-                        <span id="chaosWert" style="color:#ff3333; font-weight:bold; margin-left:5px;">2.5s</span>
-                    </div>
-                </div>
-
-                <button id="chaosStartBtn" class="btn-primary"
-                        style="background: linear-gradient(90deg, #ff3333 0%, #b30000 100%);"
-                        onclick="toggleChaosTrainer()">Trainer einschalten</button>
-            </div>
+    <!-- ── Bottom Navigation ─────────────────────────────────── -->
+    <nav class="bottom-nav">
+        <div id="navTabsGroup" class="nav-tabs-group">
+            <button id="navBtnSafe" class="nav-tab active" onclick="switchTab('safe-tab', this)">
+                <span class="nav-tab-icon">🔒</span>
+                <span>Safe</span>
+            </button>
+            <button id="navBtnTraining" class="nav-tab" onclick="switchTab('training-tab', this)">
+                <span class="nav-tab-icon">⚡</span>
+                <span>Training</span>
+            </button>
         </div>
-
-        <!-- Workout-Timer (immer sichtbar im Training-Tab) -->
-        <div class="workout-box">
-            <h3 style="color:#555; border-color:#141417;">⏱️ Workout-Timer</h3>
-            <div id="timerStatus" class="timer-status" style="color:#444;">Bereit</div>
-            <div id="timerDisplay" class="timer-display">03:00</div>
-            <div id="roundCounterDisplay" class="timer-round-counter">Modus: Endlos-Training</div>
-
-            <div class="option-row" style="margin-bottom:12px; padding: 10px 14px; flex-direction: column; align-items: flex-start; gap: 10px;">
-                <label style="color:#aaa;">Anzahl Runden:</label>
-                <div class="drum-roller-container">
-                    <div class="drum-roller-highlight"></div>
-                    <div id="drumRoller" class="drum-roller">
-                        <div class="drum-item" data-value="0">♾️</div>
-                        <div class="drum-item" data-value="1">1</div>
-                        <div class="drum-item" data-value="2">2</div>
-                        <div class="drum-item" data-value="3">3</div>
-                        <div class="drum-item" data-value="4">4</div>
-                        <div class="drum-item" data-value="5">5</div>
-                        <div class="drum-item" data-value="6">6</div>
-                        <div class="drum-item" data-value="8">8</div>
-                        <div class="drum-item" data-value="10">10</div>
-                        <div class="drum-item" data-value="12">12</div>
-                    </div>
-                    <div class="drum-roller-fade-top"></div>
-                    <div class="drum-roller-fade-bottom"></div>
-                </div>
-            </div>
-
-            <div class="timer-controls">
-                <button id="timerStartBtn" class="btn-primary" style="margin:0;" onclick="toggleTimer()">Start</button>
-                <button class="btn-sec" onclick="resetTimer()">Reset</button>
-            </div>
+        <div id="trainingFilterWrapper" class="training-filter-container">
+            <button id="trainingFilterToggle" class="nav-filter-btn" onclick="toggleTrainingFilterDropdown(event)">
+                <span class="nav-tab-icon">🔍</span>
+                <span id="filterBtnLabel">Alle</span>
+            </button>
         </div>
+    </nav>
+
+    <!-- Training Filter Dropdown – außerhalb der Nav damit overflow:hidden nicht stört -->
+    <div id="trainingFilterDropdown" class="dropdown-menu training-filter-popup">
+        <div class="dropdown-item" onclick="waehleTrainingFilter('Alle')">🌍 Alle</div>
+        <div class="dropdown-item" onclick="waehleTrainingFilter('🥊 Boxen')">🥊 Boxen</div>
+        <div class="dropdown-item" onclick="waehleTrainingFilter('🔥 Kick-/Thaiboxen')">🔥 Kick-/Thaiboxen</div>
+        <div class="dropdown-item" onclick="waehleTrainingFilter('🥊🤼 MMA')">🥊🤼 MMA</div>
+        <div class="dropdown-item" onclick="waehleTrainingFilter('🤼 Ringen/Grappling')">🤼 Ringen/Grappling</div>
+        <div class="dropdown-item" onclick="waehleTrainingFilter('🥋 Karate/TKD')">🥋 Karate/TKD</div>
     </div>
 
-    <!-- ── Toast Banner ───────────────────────────────────────── -->
+    <!-- ── Toast ─────────────────────────────────────────────── -->
     <div id="toastBanner" class="toast-banner"></div>
 
-    <!-- ── Lösch-Modal ─────────────────────────────────────────── -->
+    <!-- ── Kombi Action Sheet ────────────────────────────────── -->
+    <div id="kombiActionSheet" class="modal-overlay" onclick="schliesseKombiSheet()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-handle"></div>
+            <div id="kombiSheetTitle" class="modal-kombi-text" style="margin-top:0;"></div>
+            <div class="modal-options">
+                <button class="btn-modal-option" onclick="sheetBearbeiten()">✏️ Bearbeiten</button>
+                <button class="btn-modal-option" onclick="sheetAudioCoach()">⚡ An Audio-Coach senden</button>
+                <button class="btn-modal-option" onclick="sheetKopieren()">📋 Kopieren</button>
+                <button id="kombiSheetFavBtn" class="btn-modal-option" onclick="sheetFavorit()">⭐ Als Favorit markieren</button>
+                <button class="btn-modal-option" onclick="sheetLoeschen()" style="color:var(--red); border-color:rgba(255,51,51,0.2);">🗑️ Löschen</button>
+            </div>
+            <button class="btn-modal-cancel" onclick="schliesseKombiSheet()">Abbrechen</button>
+        </div>
+    </div>
+
+    <!-- ── Lösch-Modal ───────────────────────────────────────── -->
     <div id="loeschModal" class="modal-overlay">
         <div class="modal-content">
-            <div style="font-size: 2.5rem; margin-bottom: 10px;">🗑️</div>
-            <h3 style="border:none; margin:0; color:#ff3333;">Kombination löschen?</h3>
-            <p style="color:#555; font-size:14px; margin: 8px 0 0 0;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
-            <div id="loeschModalText" class="modal-kombi-text" style="border-color:#2a1515; box-shadow: 0 0 10px rgba(255,51,51,0.15);"></div>
-            <div style="display:flex; gap:10px; margin-top: 5px;">
+            <div class="modal-handle"></div>
+            <div style="font-size:2rem; margin-bottom:8px;">🗑️</div>
+            <h3 id="loeschModalHeader" style="font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:2px; color:var(--red); font-weight:400; margin-bottom:6px;">Löschen?</h3>
+            <p style="color:var(--text-dim); font-size:0.82rem; margin-bottom:0;">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            <div id="loeschModalText" class="modal-kombi-text" style="border-color:rgba(255,51,51,0.2);"></div>
+            <div style="display:flex; gap:10px;">
                 <button class="btn-sec" style="flex:1; padding:14px;" onclick="loeschAbbrechen()">Abbrechen</button>
-                <button onclick="loeschBestaetigen()" style="flex:1; background:linear-gradient(90deg,#ff3333,#b30000); color:white; border:none; padding:14px; border-radius:8px; font-size:1rem; font-weight:bold; cursor:pointer; text-transform:uppercase; letter-spacing:1px;">
+                <button onclick="loeschBestaetigen()"
+                        style="flex:1; background:linear-gradient(135deg,#ff3333,#b30000); color:white; border:none; padding:14px; border-radius:10px; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:2px; cursor:pointer;">
                     Löschen
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ── Speicher-Modal ──────────────────────────────────────── -->
+    <!-- ── Speicher-Modal ────────────────────────────────────── -->
     <div id="saveModal" class="modal-overlay">
         <div class="modal-content">
-            <h3 id="modalHeaderTitle" style="border:none; margin:0;">In Safe ablegen?</h3>
-            <p id="modalSubstitleText" style="color:#555; font-size:14px; margin-top:5px; margin-bottom:10px;">
-                Wähle eine Kategorie für deine Kombination:
-            </p>
+            <div class="modal-handle"></div>
+            <h3 id="modalHeaderTitle" style="font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:2px; font-weight:400; margin-bottom:4px;">Im Safe ablegen?</h3>
+            <p id="modalSubstitleText" style="color:var(--text-dim); font-size:0.82rem; margin-bottom:0;">Wähle eine Kategorie:</p>
             <div id="modalKombiText" class="modal-kombi-text"></div>
 
             <div id="modalDirectSaveArea" style="display:none; flex-direction:column;">
-                <button class="btn-modal-direct-save" onclick="speichereMitAktuellerKategorie()">Kombination Speichern</button>
+                <button class="btn-modal-direct-save" onclick="speichereMitAktuellerKategorie()">Speichern</button>
             </div>
 
             <div id="modalMultiOptionsArea" class="modal-options" style="display:none;">
@@ -280,4 +328,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
