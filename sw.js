@@ -1,14 +1,12 @@
-const CACHE_NAME = 'fightvault-v3';
+const CACHE_NAME = 'fightvault-v4';
 const ASSETS = [
     '/Fight-Vault/',
     '/Fight-Vault/index.html',
     '/Fight-Vault/style.css',
     '/Fight-Vault/script.js',
-    '/Fight-Vault/manifest.json',
-    '/Fight-Vault/icon-512.png'
+    '/Fight-Vault/manifest.json'
 ];
 
-// Installation: alle Dateien in den Cache laden
 self.addEventListener('install', e => {
     e.waitUntil(
         caches.open(CACHE_NAME)
@@ -17,7 +15,6 @@ self.addEventListener('install', e => {
     );
 });
 
-// Aktivierung: alten Cache löschen
 self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(keys =>
@@ -28,16 +25,20 @@ self.addEventListener('activate', e => {
     );
 });
 
-// Fetch: erst Cache, dann Netzwerk (Offline-first)
 self.addEventListener('fetch', e => {
     e.respondWith(
         caches.match(e.request).then(cached => {
-            if (cached) return cached;
-            return fetch(e.request).then(response => {
-                let responseClone = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseClone));
+            return cached || fetch(e.request).then(response => {
+                let clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
                 return response;
             });
         }).catch(() => caches.match('/Fight-Vault/index.html'))
     );
+});
+
+self.addEventListener('message', e => {
+    if (e.data && e.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
