@@ -224,7 +224,7 @@
 
                 <div class="option-row" style="justify-content:center; gap:0; padding: 12px 0;">
                     <div class="time-picker-group">
-                        <span class="time-picker-label">Arbeitszeit</span>
+                        <span class="time-picker-label" id="arbeitszeitLabel">Arbeitszeit</span>
                         <div class="time-picker-controls">
                             <button class="time-picker-btn" onclick="aendereArbeitszeit(-1)">−</button>
                             <span id="arbeitszeitAnzeige" class="time-picker-value">3:00</span>
@@ -276,6 +276,18 @@
         <div class="dropdown-item" onclick="waehleTrainingFilter('🥊🤼 MMA')">🥊🤼 MMA</div>
         <div class="dropdown-item" onclick="waehleTrainingFilter('🤼 Ringen/Grappling')">🤼 Ringen/Grappling</div>
         <div class="dropdown-item" onclick="waehleTrainingFilter('🥋 Karate/TKD')">🥋 Karate/TKD</div>
+    </div>
+
+    <!-- ── Update Banner ─────────────────────────────────────── -->
+    <div id="updateBanner" style="display:none; position:fixed; top:0; left:50%; transform:translateX(-50%);
+         width:100%; max-width:550px; background:#1a1a1f; border-bottom:1px solid var(--border2);
+         padding:12px 16px; z-index:4000; display:none; align-items:center; justify-content:space-between; gap:10px;">
+        <span style="font-size:0.82rem; color:var(--text); font-weight:600;">🆕 Update verfügbar</span>
+        <button onclick="installUpdate()"
+                style="background:var(--orange); color:white; border:none; padding:7px 14px;
+                       border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer;">
+            Jetzt laden
+        </button>
     </div>
 
     <!-- ── Toast ─────────────────────────────────────────────── -->
