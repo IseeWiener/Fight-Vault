@@ -29,21 +29,32 @@ let timerWurdeAutoPausiert = false;
 
 // Zeitvorgaben: [Arbeitszeit in Sek, Pause in Sek]
 const zeitStufen = [
-    [60,  20],   // 1 Min / 20 Sek
-    [120, 40],   // 2 Min / 40 Sek
-    [180, 60],   // 3 Min / 1 Min
+    [60,  20],
+    [120, 40],
+    [180, 60],
 ];
-let aktuelleZeitStufe = 2; // Standard: 3 Min
+let aktuelleZeitStufe     = 2; // Standard: 3 Min
+let naechsteZeitStufe     = 2; // Für nächste Runde
 
 function aendereArbeitszeit(richtung) {
-    aktuelleZeitStufe = Math.max(0, Math.min(zeitStufen.length - 1, aktuelleZeitStufe + richtung));
+    naechsteZeitStufe = Math.max(0, Math.min(zeitStufen.length - 1, naechsteZeitStufe + richtung));
     aktualisiereZeitAnzeige();
-    resetTimer();
     haptic.light();
+
+    if (!timerLaeuft && istArbeitszeit) {
+        // Komplett gestoppt → sofort auch aktuelle Zeit setzen
+        aktuelleZeitStufe = naechsteZeitStufe;
+        timerSekunden = zeitStufen[aktuelleZeitStufe][0];
+        renderTimerDisplay();
+    } else {
+        // Läuft oder Pause → gilt ab nächster Runde, Toast
+        zeigeToast("⏱️ Gilt ab der nächsten Runde");
+    }
 }
 
 function aktualisiereZeitAnzeige() {
-    let [arbeit, pause] = zeitStufen[aktuelleZeitStufe];
+    // Anzeige zeigt immer naechsteZeitStufe (was für nächste Runde gilt)
+    let [arbeit, pause] = zeitStufen[naechsteZeitStufe];
     let arbeitMin = Math.floor(arbeit / 60);
     let arbeitSek = arbeit % 60;
     let pauseMin  = Math.floor(pause / 60);
@@ -56,11 +67,23 @@ function aktualisiereZeitAnzeige() {
         ? `${pauseMin}:00`
         : `0:${String(pauseSek).padStart(2,'0')}`;
 
-    // Plus/Minus Button deaktivieren an den Grenzen
+    // Label zeigt ob Timer läuft
+    let label = document.getElementById("arbeitszeitLabel");
+    if (label) {
+        if (timerLaeuft || !istArbeitszeit) {
+            label.innerText    = "Nächste Runde";
+            label.style.color  = "var(--orange)";
+        } else {
+            label.innerText    = "Arbeitszeit";
+            label.style.color  = "";
+        }
+    }
+
+    // Plus/Minus Buttons an Grenzen deaktivieren
     let btns = document.querySelectorAll('.time-picker-btn');
     if (btns.length >= 2) {
-        btns[0].disabled = aktuelleZeitStufe === 0;
-        btns[1].disabled = aktuelleZeitStufe === zeitStufen.length - 1;
+        btns[0].disabled = naechsteZeitStufe === 0;
+        btns[1].disabled = naechsteZeitStufe === zeitStufen.length - 1;
     }
 }
 
@@ -289,6 +312,14 @@ function switchTrainingMode(modeId, button) {
     stoppeSämtlicheTrainingsAktionen();
     window.scrollTo({ top: 0, behavior: 'instant' });
     haptic.light();
+
+    // Extras Panel schließen
+    let panel  = document.getElementById("audioSettingsPanel");
+    let toggle = document.getElementById("audioSettingsToggle");
+    let arrow  = document.getElementById("audioSettingsArrow");
+    if (panel)  { panel.classList.remove("open"); }
+    if (toggle) { toggle.classList.remove("open"); }
+    if (arrow)  { arrow.style.transform = "rotate(0deg)"; }
 }
 
 // ── Technik-Eingabe ───────────────────────────────────────────────────────────
@@ -391,34 +422,26 @@ function initInputTouchHandler() {
 
     // Paste Event – direkt abfangen für Multi-Kombi Import
     input.addEventListener("paste", (e) => {
-        // readonly kurz entfernen damit Paste funktioniert
         input.removeAttribute("readonly");
-
-        let eingefuegt = (e.clipboardData || window.clipboardData).getData("text");
-        if (!eingefuegt) return;
-        eingefuegt = eingefuegt.trim();
-
-        if (eingefuegt.startsWith("[") && eingefuegt.includes("➔")) {
-            e.preventDefault();
-            input.setAttribute("readonly", true);
-            verarbeiteKombiBlock(eingefuegt);
-        }
-    }, { passive: false });
-
-    // Fallback: nach kurzer Verzögerung Input-Wert prüfen (für manche Mobile Browser)
-    input.addEventListener("input", () => {
-        let wert = input.value.trim();
-        if (wert.startsWith("[") && wert.includes("➔")) {
-            input.value = "";
-            input.setAttribute("readonly", true);
-            verarbeiteKombiBlock(wert);
-        }
-    });
+        setTimeout(() => {
+            let wert = input.value.trim();
+            if (wert.startsWith("[") && wert.includes("➔")) {
+                input.value = "";
+                input.setAttribute("readonly", true);
+                verarbeiteKombiBlock(wert);
+            }
+        }, 150);
+    }, { passive: true });
 }
 
 function verarbeiteKombiBlock(text) {
+    // Alle Zeilenumbruch-Varianten normalisieren
+    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     let zeilen = text.split("\n").map(z => z.trim()).filter(Boolean);
-    let kat    = zeilen[0].replace(/[\[\]]/g, '').trim();
+
+    if (zeilen.length < 2) return;
+
+    let kat = zeilen[0].replace(/[\[\]]/g, '').trim();
 
     let neueKombis = zeilen.slice(1).map(z => {
         let bereinigt = z.replace(/^\d+\.\s*/, '').trim();
@@ -428,11 +451,11 @@ function verarbeiteKombiBlock(text) {
     if (neueKombis.length === 0) return;
 
     let hinzugefuegt = 0;
-    neueKombis.forEach(text => {
-        if (!alleGespeichertenKombis.some(k => k.text === text)) {
+    neueKombis.forEach(kombiText => {
+        if (!alleGespeichertenKombis.some(k => k.text === kombiText)) {
             alleGespeichertenKombis.push({
                 id: String(Date.now()) + Math.floor(Math.random()*1000),
-                text,
+                text: kombiText,
                 kategorie: kat,
                 isFav: false
             });
@@ -751,9 +774,9 @@ function loadSafeFromLocalStorage() {
 let zuLoeschendId = null;
 
 function loescheKombi(id) {
-    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(id));
     if (!kombi) return;
-    zuLoeschendId = id;
+    zuLoeschendId = String(id);
     document.getElementById("loeschModalText").innerText = kombi.text;
     document.getElementById("loeschModal").classList.add("open");
 }
@@ -761,7 +784,7 @@ function loescheKombi(id) {
 function loeschBestaetigen() {
     if (!zuLoeschendId) return;
     haptic.error();
-    alleGespeichertenKombis = alleGespeichertenKombis.filter(k => k.id !== zuLoeschendId);
+    alleGespeichertenKombis = alleGespeichertenKombis.filter(k => String(k.id) !== zuLoeschendId);
     zuLoeschendId = null;
     saveSafeToLocalStorage();
     baueTresorUndFilterAuf();
@@ -776,7 +799,7 @@ function loeschAbbrechen() {
 let bearbeiteteKombiId = null;
 
 function bearbeiteKombi(id) {
-    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(id));
     if (!kombi) return;
 
     bearbeiteteKombiId = id;
@@ -784,22 +807,38 @@ function bearbeiteKombi(id) {
     // Kombi in den Eingabebereich laden
     aktuelleKombi = kombi.text.split(" ➔ ");
 
-    // Kategorie setzen
-    gewaehlteErstellungsKategorie = kombi.kategorie.replace(/[🥊🔥🤼🥋\s]/gu, '').trim();
-    vollerKategorieNameMitEmoji   = kombi.kategorie;
-
     // Zum Safe-Tab wechseln
     switchTab('safe-tab', document.getElementById('navBtnSafe'));
+
+    // Kategorie aus Emoji-Name extrahieren
+    let kat = kombi.kategorie;
+    let reinerKatName = kat.replace(/[🥊🔥🤼🥋\s]/gu, '').trim();
+
+    // Filter-Buttons zurücksetzen
+    document.querySelectorAll('.btn-create-filter').forEach(b => b.classList.remove('active'));
+
+    // Dropdown-Toggle anpassen
+    let toggleBtn = document.querySelector('.btn-dropdown-toggle');
+    if (toggleBtn) {
+        toggleBtn.innerText        = kat;
+        toggleBtn.style.backgroundColor = "#ff5500";
+        toggleBtn.style.color     = "white";
+    }
+
+    // filterEingabeTechniken aufrufen damit Vorschläge und Würfel stimmen
+    filterEingabeTechniken(reinerKatName, null, kat);
+
+    vollerKategorieNameMitEmoji   = kat;
+    gewaehlteErstellungsKategorie = reinerKatName;
 
     // Vorschau rendern
     renderVorschau();
 
-    // Save-Button auf "Speichern" umstellen
+    // Save-Button umstellen
     let saveBtn = document.getElementById("saveBtn");
     saveBtn.innerText = "✏️ Änderungen speichern";
     saveBtn.onclick   = () => speichereBearbeitung();
 
-    // Scroll nach oben
     window.scrollTo({ top: 0, behavior: 'smooth' });
     zeigeToast("✏️ Kombi wird bearbeitet – ändere und speichere!");
 }
@@ -807,7 +846,7 @@ function bearbeiteKombi(id) {
 function speichereBearbeitung() {
     if (!bearbeiteteKombiId || aktuelleKombi.length < 2) return;
 
-    let kombi = alleGespeichertenKombis.find(k => k.id === bearbeiteteKombiId);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(bearbeiteteKombiId));
     if (!kombi) return;
 
     kombi.text = historischeKombiFormatierung(aktuelleKombi);
@@ -880,7 +919,7 @@ function handleTouchEnd(event, element) {
 }
 
 function toggleFavorit(id) {
-    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(id));
     if (kombi) {
         kombi.isFav = !kombi.isFav;
         haptic.medium();
@@ -894,14 +933,14 @@ function toggleKombiHighlight(event, element) {
     if (isLongPressTriggered) return;
 
     let id = parseInt(element.dataset.kombiId);
-    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(id));
     if (!kombi) return;
 
     // Prüfen ob bereits markierte Kombis eine andere Kategorie haben
     let bereitsMarkierte = document.querySelectorAll('.highlighted-vault-item');
     if (bereitsMarkierte.length > 0 && !element.classList.contains('highlighted-vault-item')) {
         let ersteId = parseInt(bereitsMarkierte[0].dataset.kombiId);
-        let ersteKombi = alleGespeichertenKombis.find(k => k.id === ersteId);
+        let ersteKombi = alleGespeichertenKombis.find(k => String(k.id) === String(ersteId));
         if (ersteKombi && ersteKombi.kategorie !== kombi.kategorie) {
             zeigeToast("⚠️ Nur gleiche Kategorien können zusammen markiert werden");
             haptic.error();
@@ -1081,7 +1120,7 @@ function baueTresorUndFilterAuf() {
 let aktuelleSheetKombiId = null;
 
 function oeffneKombiSheet(id) {
-    let kombi = alleGespeichertenKombis.find(k => k.id === id);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(id));
     if (!kombi) return;
     aktuelleSheetKombiId = id;
 
@@ -1106,7 +1145,7 @@ function sheetBearbeiten() {
 }
 
 function sheetAudioCoach() {
-    let kombi = alleGespeichertenKombis.find(k => k.id === aktuelleSheetKombiId);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(aktuelleSheetKombiId));
     if (!kombi) return;
     let text = kombi.text;
     schliesseKombiSheet();
@@ -1114,7 +1153,7 @@ function sheetAudioCoach() {
 }
 
 function sheetKopieren() {
-    let kombi = alleGespeichertenKombis.find(k => k.id === aktuelleSheetKombiId);
+    let kombi = alleGespeichertenKombis.find(k => String(k.id) === String(aktuelleSheetKombiId));
     if (!kombi) return;
     let text = kombi.text;
     schliesseKombiSheet();
@@ -1187,28 +1226,64 @@ function startGambleRoulette(mitAudio = false) {
     if (pool.length === 0) { display.innerText = "Tresor leer für diesen Workout-Filter!"; return; }
 
     container.classList.add("gambling-active");
-    display.classList.add("blur-run");
 
-    let durchgaenge = 0;
-    let intervall = setInterval(() => {
-        display.innerText = pool[Math.floor(Math.random() * pool.length)].text;
-        durchgaenge++;
+    let durchgaenge  = 0;
+    let maxDurchgaenge = 20;
+    let basisTempo   = 40; // schnell am Anfang
 
-        if (durchgaenge >= 15) {
-            clearInterval(intervall);
-            container.classList.remove("gambling-active");
-            display.classList.remove("blur-run");
-
+    function naechsterSchritt() {
+        if (durchgaenge >= maxDurchgaenge) {
+            // Finale Kombi mit Enthüllungs-Effekt
             let finaleKombi = pool[Math.floor(Math.random() * pool.length)];
-            display.innerText = finaleKombi.text;
-            haptic.heavy();
+            display.style.opacity = "0";
+            display.style.transform = "scale(0.9)";
 
-            if (mitAudio) {
-                baueAudioSatzStruktur(finaleKombi.text);
-                sprichText(finaleKombi.text);
-            }
+            setTimeout(() => {
+                display.innerText = finaleKombi.text;
+                display.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+                display.style.opacity = "1";
+                display.style.transform = "scale(1)";
+                container.classList.remove("gambling-active");
+                haptic.heavy();
+
+                // Draw-Button Flash
+                let drawBtn = mitAudio
+                    ? document.getElementById("audioDrawBtn")
+                    : document.getElementById("standardDrawBtn");
+                if (drawBtn) {
+                    drawBtn.style.boxShadow = "0 0 20px rgba(255,85,0,0.9)";
+                    setTimeout(() => { drawBtn.style.boxShadow = ""; }, 500);
+                }
+
+                if (mitAudio) {
+                    baueAudioSatzStruktur(finaleKombi.text);
+                    sprichText(finaleKombi.text);
+                }
+            }, 150);
+            return;
         }
-    }, 60);
+
+        // Geschwindigkeit: schnell → langsam (exponentiell abbremsen)
+        let fortschritt = durchgaenge / maxDurchgaenge;
+        let tempo = basisTempo + Math.pow(fortschritt, 2) * 280;
+
+        display.style.transition = "none";
+        display.style.opacity = "0.4";
+        display.innerText = pool[Math.floor(Math.random() * pool.length)].text;
+
+        setTimeout(() => {
+            display.style.opacity = "1";
+        }, tempo * 0.3);
+
+        durchgaenge++;
+        setTimeout(naechsterSchritt, tempo);
+    }
+
+    // Reset display style
+    display.style.transition = "none";
+    display.style.opacity = "1";
+    display.style.transform = "scale(1)";
+    naechsterSchritt();
 }
 
 // ── Audio-Coach ───────────────────────────────────────────────────────────────
@@ -1279,9 +1354,10 @@ function sprichText(kombiText) {
         }
 
         let utterance = new SpeechSynthesisUtterance(optimiereTextFuerSprachausgabe(parts[index]));
-        utterance.lang  = 'de-DE';
-        utterance.rate  = aktuelleSprechGeschwindigkeit;
-        utterance.pitch = 1.0;
+        utterance.lang   = 'de-DE';
+        utterance.rate   = aktuelleSprechGeschwindigkeit;
+        utterance.pitch  = 1.0;
+        utterance.volume = 1.0;
 
         utterance.onstart = function () {
             document.querySelectorAll('.audio-word').forEach(w => w.classList.remove('highlight-word'));
@@ -1327,7 +1403,20 @@ function toggleAudioLoop() {
         let mixerAktiv = document.getElementById("audioMixerCheckbox").checked;
 
         if (pool.length === 0 && !mixerAktiv) {
-            zeigeToast("⚠️ Kein Kombi im Tresor für diesen Filter!");
+            zeigeToast("Tresor leer – aktiviere den Mixer für Zufalls-Kombis 🎲");
+            // Mixer-Checkbox kurz aufleuchten lassen
+            let checkbox = document.getElementById("audioMixerCheckbox");
+            let panel    = document.getElementById("audioSettingsPanel");
+            let toggle   = document.getElementById("audioSettingsToggle");
+            if (panel && !panel.classList.contains("open")) {
+                panel.classList.add("open");
+                if (toggle) toggle.classList.add("open");
+            }
+            if (checkbox) {
+                checkbox.parentElement.style.transition = "background 0.3s";
+                checkbox.parentElement.style.background = "rgba(255,85,0,0.15)";
+                setTimeout(() => { checkbox.parentElement.style.background = ""; }, 1500);
+            }
             return;
         }
 
@@ -1337,9 +1426,11 @@ function toggleAudioLoop() {
 
         audioLoopLaeuft = true;
         let btn = document.getElementById("audioLoopBtn");
-        btn.innerText       = "Loop Stopp";
-        btn.style.color       = "#ff5500";
-        btn.style.borderColor = "#ff5500";
+        btn.innerText = "Loop Stopp";
+        btn.style.background    = "transparent";
+        btn.style.color         = "#ff5500";
+        btn.style.borderColor   = "#ff5500";
+        btn.style.boxShadow     = "0 0 8px rgba(255,85,0,0.6), inset 0 0 8px rgba(255,85,0,0.1)";
 
         runAudioLoopSchritt();
         let sekunden = parseInt(document.getElementById("audioIntervallSlider").value) / 2;
@@ -1422,7 +1513,13 @@ function stoppeAudioLoop() {
     if (audioQueueTimeout) clearTimeout(audioQueueTimeout);
 
     let btn = document.getElementById("audioLoopBtn");
-    if (btn) { btn.innerText = "Loop Start"; btn.style.color = "#666"; btn.style.borderColor = "#222"; btn.style.background = ""; }
+    if (btn) {
+        btn.innerText         = "Loop Start";
+        btn.style.color       = "";
+        btn.style.borderColor = "";
+        btn.style.background  = "";
+        btn.style.boxShadow   = "";
+    }
 
     window.speechSynthesis.cancel();
     istGeradeAmSprechen = false;
@@ -1474,8 +1571,10 @@ function runChaosSchritt() {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         let utterance = new SpeechSynthesisUtterance(optimiereTextFuerSprachausgabe(randomTech.name));
-        utterance.lang = 'de-DE';
-        utterance.rate = 1.2;
+        utterance.lang   = 'de-DE';
+        utterance.rate   = 1.1;
+        utterance.volume = 1.0;
+        utterance.pitch  = 1.1;
         window.speechSynthesis.speak(utterance);
     }
 }
@@ -1504,12 +1603,78 @@ function stoppeSämtlicheTrainingsAktionen() {
     stoppeChaosTrainer();
 }
 
-// ── Timer ─────────────────────────────────────────────────────────────────────
+// ── Service Worker Update ─────────────────────────────────────────────────────
+let neuerServiceWorker = null;
+
+function initServiceWorkerUpdates() {
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker.register('sw.js').then(reg => {
+        // Prüfen ob Update beim Start schon wartet
+        if (reg.waiting) {
+            zeigeUpdateBanner();
+            neuerServiceWorker = reg.waiting;
+        }
+
+        // Neues Update wird gefunden
+        reg.addEventListener('updatefound', () => {
+            let neu = reg.installing;
+            neu.addEventListener('statechange', () => {
+                if (neu.state === 'installed' && navigator.serviceWorker.controller) {
+                    neuerServiceWorker = neu;
+                    zeigeUpdateBanner();
+                }
+            });
+        });
+    });
+
+    // Nach Aktivierung neu laden
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+    });
+}
+
+function zeigeUpdateBanner() {
+    let banner = document.getElementById("updateBanner");
+    if (banner) banner.style.display = "flex";
+}
+
+function installUpdate() {
+    if (neuerServiceWorker) {
+        neuerServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+    }
+}
+let wakeLock = null;
 let audioCtx = null;
 
-function spieleBoxglocke(anzahlSchlaege = 1) {
+async function aktiviereWakeLock() {
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch(e) {
+            console.log('Wake Lock nicht verfügbar:', e);
+        }
+    }
+}
+
+function deaktiviereWakeLock() {
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
+}
+
+// Wake Lock neu anfordern wenn App wieder sichtbar wird
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && timerLaeuft) {
+        await aktiviereWakeLock();
+    }
+});
+
+async function spieleBoxglocke(anzahlSchlaege = 1) {
     try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
 
         function einzelnerSchlag(zeitversatz) {
             let oscillator = audioCtx.createOscillator();
@@ -1522,7 +1687,7 @@ function spieleBoxglocke(anzahlSchlaege = 1) {
             oscillator.frequency.setValueAtTime(800, audioCtx.currentTime + zeitversatz);
             oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + zeitversatz + 1.2);
 
-            gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime + zeitversatz);
+            gainNode.gain.setValueAtTime(1.2, audioCtx.currentTime + zeitversatz);
             gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + zeitversatz + 1.5);
 
             oscillator.start(audioCtx.currentTime + zeitversatz);
@@ -1530,7 +1695,7 @@ function spieleBoxglocke(anzahlSchlaege = 1) {
         }
 
         for (let i = 0; i < anzahlSchlaege; i++) {
-            einzelnerSchlag(i * 0.4);
+            einzelnerSchlag(i * 0.5);
         }
     } catch(e) {
         console.log("Audio nicht verfügbar:", e);
@@ -1702,7 +1867,10 @@ function drumRender(mitAnimation) {
 function drumApply() {
     drumRender(true);
     maxRundenVorgabe = rundenWerte[drumIndex];
-    resetTimer();
+    // Runden gelten sofort – nur resetten wenn Timer komplett gestoppt
+    if (!timerLaeuft && istArbeitszeit) {
+        resetTimer();
+    }
 }
 
 function setzeRunden(anzahl) { }
@@ -1715,6 +1883,7 @@ function toggleTimer() {
     } else {
         spieleBoxglocke(1); // 1x Glocke beim Start
         haptic.bell();
+        aktiviereWakeLock();
         timerLaeuft = true;
         btn.innerText        = "Pause";
         btn.style.background = "linear-gradient(90deg, #ffcc00 0%, #d4aa00 100%)";
@@ -1733,6 +1902,7 @@ function toggleTimer() {
 function stoppeTimer() {
     timerLaeuft = false;
     if (timerInterval) clearInterval(timerInterval);
+    deaktiviereWakeLock();
     let btn = document.getElementById("timerStartBtn");
     if (btn) { btn.innerText = "Start"; btn.style.background = "linear-gradient(90deg, #ff5500 0%, #d44600 100%)"; }
     document.getElementById("timerStatus").classList.remove("pulse-active");
@@ -1740,9 +1910,10 @@ function stoppeTimer() {
 
 function resetTimer() {
     stoppeTimer();
-    istArbeitszeit = true;
-    timerSekunden  = zeitStufen[aktuelleZeitStufe][0];
-    aktuelleRunde  = 1;
+    istArbeitszeit    = true;
+    aktuelleZeitStufe = naechsteZeitStufe;
+    timerSekunden     = zeitStufen[aktuelleZeitStufe][0];
+    aktuelleRunde     = 1;
     document.getElementById("timerStatus").innerText   = "BEREIT";
     document.getElementById("timerStatus").style.color = "var(--text-dim)";
     let kreis = document.getElementById("timerCircleProgress");
@@ -1780,15 +1951,15 @@ function handleTimerWechsel() {
         document.getElementById("timerStatus").style.color = "#00c853";
         if (kreis)   kreis.className   = "timer-circle-progress pause-mode";
         if (kreisHg) kreisHg.className = "timer-circle-bg pause-mode";
-        // Trainer-Status merken und stoppen
         let audioWarAktiv = audioLoopLaeuft;
         let chaosWarAktiv = chaosTrainerLaeuft;
         stoppeSämtlicheTrainingsAktionen();
-        // Für Resume merken
         window._audioWarAktiv = audioWarAktiv;
         window._chaosWarAktiv = chaosWarAktiv;
 
     } else {
+        // Neue Runde startet – naechsteZeitStufe übernehmen
+        aktuelleZeitStufe = naechsteZeitStufe;
         istArbeitszeit = true;
         aktuelleRunde++;
         spieleBoxglocke(1);
@@ -1909,4 +2080,17 @@ window.addEventListener('DOMContentLoaded', () => {
     initSwipeNavigation();
     aktualisiereZeitAnzeige();
     ladeTrainingFilter();
+    initServiceWorkerUpdates();
+
+    // AudioContext beim ersten Touch/Click initialisieren
+    let initAudio = () => {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        document.removeEventListener('touchstart', initAudio);
+        document.removeEventListener('click', initAudio);
+    };
+    document.addEventListener('touchstart', initAudio, { once: true });
+    document.addEventListener('click', initAudio, { once: true });
 });
