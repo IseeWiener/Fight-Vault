@@ -144,9 +144,9 @@ body {
 }
 
 .btn-filter {
-    background: var(--bg3);
-    color: var(--text-mid);
-    border: 1px solid var(--border);
+    background: #1e1e24;
+    color: #c0c0c8;
+    border: 1px solid rgba(255,255,255,0.15);
     padding: 6px 12px;
     border-radius: 20px;
     cursor: pointer;
@@ -156,10 +156,17 @@ body {
     transition: all 0.15s;
 }
 
+.btn-filter:hover {
+    color: white;
+    background: #28282f;
+    border-color: rgba(255,255,255,0.25);
+}
+
 .btn-filter.active {
     background: var(--orange);
     color: white;
     border-color: var(--orange);
+    box-shadow: 0 0 10px var(--orange-soft);
 }
 
 .btn-create-filter { font-size: 0.72rem; padding: 5px 10px; }
